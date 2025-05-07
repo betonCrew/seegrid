@@ -1,0 +1,6 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "New_Library")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/symbols/New_Library.kicad_sym")(options "")(descr ""))
+  (lib (name "mcu_infineon_xmc")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/symbols/mcu_infineon_xmc.kicad_sym")(options "")(descr ""))
+  (lib (name "LED_Lib")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/symbols/LED_Lib.kicad_sym")(options "")(descr ""))
+)

@@ -3,6 +3,18 @@ seegrid
 a floating lighting installation
 
 # Electronics
+
+xmc1202 + nRF24L01 (2.4GHz)
+xmc1202 + RFM69 (433MHz)
+xmc1202 + CC1101 (433MHz)
+nRF52810 inkl PWM (2.4GHz)
+xmc1100 (33cent)
+
+AL8860
+inductor
+
+osram rgbw led?
+
 ## Comms
 - rf
 - infrared ([pixmob](https://github.com/danielweidman/pixmob-ir-reverse-engineering/tree/main))

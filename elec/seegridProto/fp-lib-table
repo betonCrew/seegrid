@@ -1,0 +1,8 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "VacuScope")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/footprints/VacuScope.pretty")(options "")(descr ""))
+  (lib (name "Pauls")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/footprints/Pauls.pretty")(options "")(descr ""))
+  (lib (name "Panelization")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/footprints/Panelization.pretty")(options "")(descr ""))
+  (lib (name "micro-MaTch")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/footprints/micro-MaTch.pretty")(options "")(descr ""))
+  (lib (name "LED_Lib")(type "KiCad")(uri "/home/paul/Nextcloud/kicad/libs/footprints/LED_Lib.pretty")(options "")(descr ""))
+)
