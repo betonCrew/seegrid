@@ -1,0 +1,8 @@
+elec/seegridProto/production/backups/*
+elec/seegridProto/seegridProto-backups/*
+elec/seegridProto/seegridProto-backups/*
+finance
+*build
+*bsps*
+*deps*
+seaGrid_finance.zip

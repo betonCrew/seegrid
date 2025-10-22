@@ -1,0 +1,30 @@
+
+
+GraphedExpression="(debug).loop_count", DisplayFormat=DISPLAY_FORMAT_DEC, Color=#e56a6f, Show=0
+GraphedExpression="(debug).rx_count", DisplayFormat=DISPLAY_FORMAT_DEC, Color=#35792b, Show=0
+GraphedExpression="(debug).tx_count", DisplayFormat=DISPLAY_FORMAT_DEC, Color=#769dda, Show=0
+GraphedExpression="msTicks", DisplayFormat=DISPLAY_FORMAT_DEC, Color=#b14f0d, Show=0
+OpenDocument="main.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/main.c", Line=59
+OpenDocument="xmc_usic.h", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/mtb-xmclib-cat3/release-v4.4.0/XMCLib/inc/xmc_usic.h", Line=1134
+OpenDocument="xmc_gpio.h", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/mtb-xmclib-cat3/release-v4.4.0/XMCLib/inc/xmc_gpio.h", Line=262
+OpenDocument="core_cm0.h", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/cmsis/release-v5.8.0/Core/Include/core_cm0.h", Line=870
+OpenDocument="nrf24l01.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seagridRF/nrf24l01.c", Line=434
+OpenDocument="seeGridRF.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seagridRF/seeGridRF.c", Line=305
+OpenDocument="dmx.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/dmx.c", Line=0
+OpenToolbar="Debug", Floating=0, x=0, y=0
+OpenToolbar="Breakpoints", Floating=0, x=1, y=0
+OpenWindow="Call Stack", DockArea=LEFT, x=0, y=0, w=491, h=814, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=0, w=817, h=1114, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=1, w=817, h=214, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=1, w=491, h=202, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Data Sampling", DockArea=LEFT, x=0, y=2, w=491, h=306, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
+SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
+TableHeader="Call Stack", SortCol="Function", SortOrder="ASCENDING", VisibleCols=["Function";"Stack Frame";"Source";"PC";"Return Address";"Stack Used"], ColWidths=[280;105;119;100;147;100]
+TableHeader="Data Sampling Table", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" (debug).loop_count";" (debug).rx_count";" (debug).tx_count";" msTicks"], ColWidths=[100;100;100;100;100;100]
+TableHeader="Data Sampling Setup", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[147;168;100;100;100;100;100;100;100]
+TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[232;230;355]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[100;184;100;107]
+TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;27;27;26]
+WatchedExpression="debug", Window=Watched Data 1

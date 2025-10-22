@@ -1028,7 +1028,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Regulator_Linear:L78L05_SOT89"
+		(symbol "Regulator_Linear:L78L33_SOT89"
 			(pin_names
 				(offset 0.254)
 			)
@@ -1043,7 +1043,7 @@
 					)
 				)
 			)
-			(property "Value" "L78L05_SOT89"
+			(property "Value" "L78L33_SOT89"
 				(at -0.635 3.175 0)
 				(effects
 					(font
@@ -1071,7 +1071,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Positive 100mA 30V Linear Regulator, Fixed Output 5V, SOT-89"
+			(property "Description" "Positive 100mA 30V Linear Regulator, Fixed Output 3.3V, SOT-89"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1098,7 +1098,7 @@
 					(hide yes)
 				)
 			)
-			(symbol "L78L05_SOT89_0_1"
+			(symbol "L78L33_SOT89_0_1"
 				(rectangle
 					(start -5.08 1.905)
 					(end 5.08 -5.08)
@@ -1111,7 +1111,7 @@
 					)
 				)
 			)
-			(symbol "L78L05_SOT89_1_1"
+			(symbol "L78L33_SOT89_1_1"
 				(pin power_in line
 					(at -7.62 0 0)
 					(length 2.54)
@@ -1449,6 +1449,17 @@
 			)
 			(embedded_fonts no)
 		)
+	)
+	(text "4xAA\nAlkaline / NiMH\n\n3,6 - 6,4"
+		(exclude_from_sim no)
+		(at 37.846 92.71 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "a12fcc12-177b-4b17-b165-ad54325b682a")
 	)
 	(junction
 		(at 106.68 102.87)
@@ -2142,7 +2153,7 @@
 		)
 		(uuid "d0a83be8-18e3-4106-a24d-cf731335fcae")
 	)
-	(hierarchical_label "Vcc"
+	(hierarchical_label "Vdd"
 		(shape output)
 		(at 257.81 118.11 0)
 		(effects
@@ -3111,7 +3122,7 @@
 		)
 	)
 	(symbol
-		(lib_id "Regulator_Linear:L78L05_SOT89")
+		(lib_id "Regulator_Linear:L78L33_SOT89")
 		(at 213.36 118.11 0)
 		(unit 1)
 		(exclude_from_sim no)
@@ -3121,15 +3132,15 @@
 		(fields_autoplaced yes)
 		(uuid "629f2b6a-3c5b-4fdf-bdd8-dcd28b3d3d57")
 		(property "Reference" "U4"
-			(at 213.36 111.125 0)
+			(at 213.36 111.76 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Value" "L78L05_SOT89"
-			(at 213.36 113.665 0)
+		(property "Value" "L78L33_SOT89"
+			(at 213.36 114.3 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3155,7 +3166,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Positive 100mA 30V Linear Regulator, Fixed Output 3.3V, SOT-89"
 			(at 213.36 118.11 0)
 			(effects
 				(font

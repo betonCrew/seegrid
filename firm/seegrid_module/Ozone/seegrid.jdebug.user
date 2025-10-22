@@ -1,0 +1,22 @@
+
+
+
+Breakpoint=/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_module/ledTimer.c:22, State=BP_STATE_ON
+OpenDocument="ledTimer.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_module/ledTimer.c", Line=8
+OpenDocument="colors.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_module/colors.c", Line=0
+OpenDocument="ledFx.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_module/ledFx.c", Line=0
+OpenDocument="nrf24l01.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seagridRF/nrf24l01.c", Line=30
+OpenDocument="seeGridRF.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seagridRF/seeGridRF.c", Line=44
+OpenDocument="seegrid.jdebug", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_module/Ozone/seegrid.jdebug", Line=0
+OpenDocument="main.c", FilePath="/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_module/main.c", Line=189
+OpenToolbar="Debug", Floating=0, x=0, y=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=0, w=435, h=468, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=2
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=1, w=435, h=468, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Memory 1", DockArea=LEFT, x=0, y=0, w=491, h=207, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x20000567
+OpenWindow="Local Data", DockArea=LEFT, x=0, y=1, w=491, h=729, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
+TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
+TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[232;360;385]
+TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
+TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;27;27;26]
+TableHeader="Local Data", SortCol="Location", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Scope"], ColWidths=[126;181;100;100;154;182]

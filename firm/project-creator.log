@@ -1,0 +1,116 @@
+
+Summary: 
+
+BSP: KIT_XMC14_BOOT_001
+Template Application(s): Empty XMC App
+Application(s) Root Path: /home/paul/Nextcloud/Projects/seegrid/firm
+
+Press "Create" to create the selected application(s).
+
+Collecting application data...
+
+Info: The following entered on the command line will create the exact same project as that created with the GUI tool:
+/opt/ModusToolbox/tools_3.1/project-creator/bin/project-creator-cli --board-id KIT_XMC14_BOOT_001 --board-uri https://github.com/cypresssemiconductorco/TARGET_KIT_XMC14_BOOT_001 --board-commit latest-v2.X --app-id mtb-example-xmc-empty-app --app-uri https://github.com/cypresssemiconductorco/mtb-example-xmc-empty-app --app-commit latest-v2.X --target-dir /home/paul/Nextcloud/Projects/seegrid/firm --user-app-name seegrid_rf --use-modus-shell
+
+Starting application creation for '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf'.
+Acquiring the application source 'https://github.com/cypresssemiconductorco/mtb-example-xmc-empty-app'.
+Acquired application source successfully.
+Loading the application.
+Loaded the application successfully.
+Processing project 'seegrid_rf'.
+Starting to commit changes to the filesystem and project 'mtb-example-xmc-empty-app'.
+Writing mtb file for asset 'KIT_XMC14_BOOT_001' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/deps'.
+Writing mtb file for asset 'core-lib' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs'.
+Writing mtb file for asset 'core-make' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs'.
+Writing mtb file for asset 'mtb-xmclib-cat3' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs'.
+Writing mtb file for asset 'recipe-make-cat3' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs'.
+Writing mtb file for asset 'cmsis' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs'.
+Writing mtb file for asset 'device-db' to the folder '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs'.
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/TARGET_KIT_XMC14_BOOT_001 TARGET_KIT_XMC14_BOOT_001
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-lib clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/core-lib release-v1.4.4
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-make clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/core-make release-v3.4.1
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/mtb-xmclib-cat3 clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/mtb-xmclib-cat3 release-v4.5.0
+Klone nach 'TARGET_KIT_XMC14_BOOT_001'...
+Klone nach 'release-v1.4.4'...
+Klone nach 'release-v3.4.1'...
+Klone nach 'release-v4.5.0'...
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-lib clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/core-lib release-v1.4.4
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/recipe-make-cat3 clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/recipe-make-cat3 release-v2.3.1
+Klone nach 'release-v2.3.1'...
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/TARGET_KIT_XMC14_BOOT_001 TARGET_KIT_XMC14_BOOT_001
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/cmsis clone --origin cypress --no-checkout https://github.com/Infineon/cmsis release-v5.8.0
+Klone nach 'release-v5.8.0'...
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-make clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/core-make release-v3.4.1
+Starting: git -C /home/paul/.modustoolbox/global/device-db/release-v4.26.0 fetch --recurse-submodules=no --tags --force cypress --update-head-ok "refs/heads/*:refs/heads/*" --quiet
+Success: git -C /home/paul/.modustoolbox/global/device-db/release-v4.26.0 fetch --recurse-submodules=no --tags --force cypress --update-head-ok "refs/heads/*:refs/heads/*" --quiet
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-lib/release-v1.4.4 -c advice.detachedHead=false checkout release-v1.4.4 --force
+HEAD ist jetzt bei 933c475 Upload core-lib [3609]
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-lib/release-v1.4.4 -c advice.detachedHead=false checkout release-v1.4.4 --force
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs/TARGET_KIT_XMC14_BOOT_001 -c advice.detachedHead=false checkout release-v2.3.1 --force
+HEAD ist jetzt bei 34def83 Upload TARGET_KIT_XMC14_BOOT_001 [2752]
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs/TARGET_KIT_XMC14_BOOT_001 -c advice.detachedHead=false checkout release-v2.3.1 --force
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-make/release-v3.4.1 -c advice.detachedHead=false checkout release-v3.4.1 --force
+HEAD ist jetzt bei 79de3ac Upload core-make 3.4.1.6167 [2900]
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/core-make/release-v3.4.1 -c advice.detachedHead=false checkout release-v3.4.1 --force
+Starting: git -C /home/paul/.modustoolbox/global/device-db/release-v4.26.0 -c advice.detachedHead=false checkout release-v4.26.0 --force
+HEAD ist jetzt bei c2c1fc50 Upload device-db 4.26.0.8600 [3605]
+Success: git -C /home/paul/.modustoolbox/global/device-db/release-v4.26.0 -c advice.detachedHead=false checkout release-v4.26.0 --force
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/recipe-make-cat3 clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/recipe-make-cat3 release-v2.3.1
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/recipe-make-cat3/release-v2.3.1 -c advice.detachedHead=false checkout release-v2.3.1 --force
+HEAD ist jetzt bei 3d7bca5 Upload recipe-make-cat3 2.3.1.6098 [2900]
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/recipe-make-cat3/release-v2.3.1 -c advice.detachedHead=false checkout release-v2.3.1 --force
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/cmsis clone --origin cypress --no-checkout https://github.com/Infineon/cmsis release-v5.8.0
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/cmsis/release-v5.8.0 -c advice.detachedHead=false checkout release-v5.8.0 --force
+HEAD ist jetzt bei ce02f64 Upload cmsis 5.8.0.50
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/cmsis/release-v5.8.0 -c advice.detachedHead=false checkout release-v5.8.0 --force
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/mtb-xmclib-cat3 clone --origin cypress --no-checkout https://github.com/cypresssemiconductorco/mtb-xmclib-cat3 release-v4.5.0
+Starting: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/mtb-xmclib-cat3/release-v4.5.0 -c advice.detachedHead=false checkout release-v4.5.0 --force
+HEAD ist jetzt bei c4744d1 Upload mtb-xmclib-cat3 4.5.0.5027 [3403]
+Success: git -C /home/paul/Nextcloud/Projects/seegrid/firm/mtb_shared/mtb-xmclib-cat3/release-v4.5.0 -c advice.detachedHead=false checkout release-v4.5.0 --force
+Requested to change the active target to 'APP_KIT_XMC14_BOOT_001'.
+Removed the file '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/deps/TARGET_KIT_XMC14_BOOT_001.mtb'.
+Writing the file '/home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/libs/app.mk'.
+Successfully committed changes to the project 'mtb-example-xmc-empty-app'.
+Project "seegrid_rf" created successfully.
+Successfully created "seegrid_rf" application.
+==============================================================================
+= Export "seegrid_rf" application to Microsoft Visual Studio Code =
+==============================================================================
+make vscode CY_IDE_PRJNAME=seegrid_rf CY_TOOLS_PATHS=/opt/ModusToolbox/tools_3.1
+Tools Directory: /opt/ModusToolbox/tools_3.1
+Removing .mtbqueryapi file...
+Searching installed tools in progress...
+Searching installed tools complete
+Initializing build: mtb-example-xmc-empty-app Debug APP_KIT_XMC14_BOOT_001 GCC_ARM
+Prebuild operations complete
+Auto-discovery in progress...
+Auto-discovery complete
+Commencing build operations...
+Tools Directory: /opt/ModusToolbox/tools_3.1
+Constructing build rules...
+Build rules construction complete
+==============================================================================
+= Building application =
+==============================================================================
+Generating compilation database file...
+-> ./build/compile_commands.json
+Compilation database file generation complete
+Generated /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/.vscode/c_cpp_properties.json
+Generated /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/.vscode/extensions.json
+Generated /home/paul/Nextcloud/Projects/seegrid/firm/seegrid_rf/.vscode/settings.json
+Generated .vscode/tasks.json
+Generated mtb-example-xmc-empty-app.code-workspace
+Generated .vscode/launch.json
+Required Settings, Tasks and Debug-configurations have been created and are ready to use.
+  1. In VS Code, File->Open Workspace From File (Welcome page->Start->Open File)
+  2. Select the .code-workspace file from app root directory and open
+  3. Builds: Terminal->Run Task
+  4. Debugging: "Bug icon" on the left-hand pane:
+For more information, refer to the Visual Studio Code for ModusToolbox user guide.
+Toolchain validation: PASS
+The application "seegrid_rf" was successfully exported to Microsoft Visual Studio Code.
+0 error(s), 0 warning(s)
+
+Summary:
+
+Successfully created and exported "seegrid_rf" application.
