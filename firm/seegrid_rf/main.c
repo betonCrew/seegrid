@@ -117,21 +117,12 @@ volatile debug_t debug = {0,0,0,0};
 #ifdef RF_LOOPBACK_TEST
     #define RB radioB.spiHardware, radioB.spiSelo, radioB.cePort, radioB.cePin
 
-    /* same modulation as the protocol: chunk bit 0 -> 0b01, bit 1 -> 0b10 */
-    static uint8_t loopback_chunkAddr(uint8_t chunk) {
-        uint8_t addr = 0;
-        for (int8_t b = 3; b >= 0; b--) {
-            addr = (addr << 2) | (((chunk >> b) & 1) ? 0b10 : 0b01);
-        }
-        return addr;
-    }
-
     static void loopback_setup(void) {
         for (uint16_t i = 0; i < sizeof(universe); i++) universe[i] = i / BROADCAST_PL_WITDH;
 
         nrf24_setupFlags(RB, RX_DR_MASK);
         nrf24_disableAutoAck(RB, 0xFF);
-        nrf24_setCrc(RB, CRC_OFF);
+        nrf24_setCrc(RB, BROADCAST_CRC);
         nrf24_disableRxAddr(RB, 0xFF);
         nrf24_enableRxAddr(RB, 1 << 0);
         nrf24_setAddrWidth(RB, W_3BYTES);
@@ -144,7 +135,7 @@ volatile debug_t debug = {0,0,0,0};
     /* listen to one chunk; called before the broadcast */
     static void loopback_listen(uint8_t chunk) {
         XMC_GPIO_SetOutputLow(radioB.cePort, radioB.cePin);
-        nrf24_setRxAddr(RB, 0, FRAME_ADDR_BASE | loopback_chunkAddr(chunk));
+        nrf24_setRxAddr(RB, 0, sgRF_chunkAddress(chunk));
         nrf24_flushRx(RB);
         nrf24_clearFlags(RB, RX_DR_MASK | TX_DS_MASK | MAX_RT_MASK);
         XMC_GPIO_SetOutputHigh(radioB.cePort, radioB.cePin);

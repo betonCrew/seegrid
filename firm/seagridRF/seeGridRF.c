@@ -44,27 +44,20 @@ extern volatile debug_t debug;
     } _sgRF_fixtureIdentifier_t;
 
     /**
-     *  dmx_address has to be modulated as chunk address in packet address
-     *  bit 0 -> 0b01  //  bit 1 -> 0b10
+     *  LSByte of the packet address per 32 byte chunk: the 16 codewords of
+     *  the extended Hamming code [8,4,4] XOR 0x08. Every two chunk addresses
+     *  differ in >= 4 bits, no byte has a run longer than 4 bits, and with
+     *  FRAME_ADDR_BASE no address continues the preamble by more than 4 bits
+     *  (nRF24L01+ spec 7.3.2: preamble-like addresses raise packet errors)
      */
-    static const uint8_t _chunk_addr_lookup_table[32] = {
-        0b01010101,
-        0b01010110,
-        0b01011001,
-        0b01011010,
-        0b01100101,
-        0b01100110,
-        0b01101001,
-        0b01101010,
-        0b10010101,
-        0b10010110,
-        0b10011001,
-        0b10011010,
-        0b10100101,
-        0b10100110,
-        0b10101001,
-        0b10101010
+    static const uint8_t _chunk_addr_lookup_table[512/BROADCAST_PL_WITDH] = {
+        0x08, 0x16, 0x25, 0x3B, 0x43, 0x5D, 0x6E, 0x70,
+        0x8F, 0x91, 0xA2, 0xBC, 0xC4, 0xDA, 0xE9, 0xF7
     };
+
+    uint32_t sgRF_chunkAddress(const uint8_t chunk) {
+        return FRAME_ADDR_BASE | _chunk_addr_lookup_table[chunk % (512/BROADCAST_PL_WITDH)];
+    }
 
 
 bool sgRF_init(sgRF_radio_t* radio){
@@ -140,7 +133,7 @@ bool sgRF_init(sgRF_radio_t* radio){
         nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, TX_DS_MASK);
         nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
         nrf24_disableAutoAck(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
-        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CRC_OFF);
+        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_CRC);
         nrf24_disableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
         nrf24_setAddrWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, W_3BYTES);
         nrf24_disableAutoRetransmit(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
@@ -179,19 +172,19 @@ bool sgRF_init(sgRF_radio_t* radio){
 
         const uint8_t chunks = 512/BROADCAST_PL_WITDH;
         uint8_t dmx_chunk = 0;
-        uint8_t packet_addr;
+        uint32_t packet_addr;
         /* chunk pointer points to chunk-beginn in dmx universe*/
         const uint8_t* chunk_ptr;
         
         nrf24_flushTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
         while (dmx_chunk < chunks) {
-            packet_addr = _chunk_addr_lookup_table[dmx_chunk];
+            packet_addr = sgRF_chunkAddress(dmx_chunk);
             chunk_ptr = frame + (dmx_chunk * BROADCAST_PL_WITDH);
             /* TX_ADDR is applied when a packet goes on air: never change it
                while the previous one is still queued */
             _sgRF_waitTxDone(radio);
-            nrf24_setTxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, FRAME_ADDR_BASE | packet_addr);
+            nrf24_setTxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, packet_addr);
             nrf24_writeTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)chunk_ptr, BROADCAST_PL_WITDH);
             /* pulse carrier enable */
             XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
@@ -270,11 +263,9 @@ bool sgRF_init(sgRF_radio_t* radio){
         } while (--tries && XMC_GPIO_GetInput(radio->irqPort, radio->irqPin) == 0);
     }
 
-    static inline const uint8_t _sgRF_translateAddress(const _sgRF_dmx_addr_t dmx_addr) {
+    static inline uint32_t _sgRF_translateAddress(const _sgRF_dmx_addr_t dmx_addr) {
         /* each chunk holds 32 bytes of dmx data / addresses */
-        const uint8_t dmx_chunk = dmx_addr / BROADCAST_PL_WITDH;
-        const uint8_t packet_addr = _chunk_addr_lookup_table[dmx_chunk];
-        return packet_addr;
+        return sgRF_chunkAddress(dmx_addr / BROADCAST_PL_WITDH);
     }
 
 
@@ -291,13 +282,13 @@ bool sgRF_init(sgRF_radio_t* radio){
         // TODO where to get the dmx address??
         radio->_addr = 0x00;
         radio->_width = FIXTURE_CH_CNT;
-        const uint8_t dmx_chunk_addr = _sgRF_translateAddress(radio->_addr);
+        const uint32_t dmx_chunk_addr = _sgRF_translateAddress(radio->_addr);
 
         /* config radio channels */
         nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK);
         nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
         nrf24_disableAutoAck(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
-        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CRC_OFF);
+        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_CRC);
         nrf24_setAddrWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, W_3BYTES);
         nrf24_disableAutoRetransmit(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
@@ -305,7 +296,7 @@ bool sgRF_init(sgRF_radio_t* radio){
         nrf24_setDataRate(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_DATARATE);
         nrf24_setPowerLevel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_POWER);
 
-        nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, FRAME_ADDR_BASE | dmx_chunk_addr);
+        nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, dmx_chunk_addr);
         nrf24_enableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 1<<BROADCAST_RX_PIPE);
         nrf24_setPayloadWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, BROADCAST_PL_WITDH);
 

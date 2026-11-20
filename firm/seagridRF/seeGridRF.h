@@ -22,8 +22,6 @@
     #define ADDR_WIDTH          3
     #define AUTO_RETRANS        0
 
-    #define CRC_EN              0
-    #define CRC_CODE            0
 
     #define RF_POWER            0b11
 
@@ -36,13 +34,16 @@
  */
 
     #define FRAME_ADDR_WIDTH    3
-    #define FRAME_ADDR_BASE     (0b10101010 << 16 | 0b10101010 << 8)
+    /* upper address bytes, the LSByte selects the chunk (see seeGridRF.c).
+       Must not continue the preamble (nRF24L01+ spec 7.3.2) */
+    #define FRAME_ADDR_BASE     (0x057D << 8)
 
     #define BROADCAST_CH        125
     #define BROADCAST_DATARATE  R_1Mbps
     #define BROADCAST_POWER     P_0dBM
     #define BROADCAST_RX_PIPE   0
     #define BROADCAST_PL_WITDH  32
+    #define BROADCAST_CRC       CRC_2B
 
     #define CONTROL_CH          64
     #define CONTROL_DATARATE    R_250kbps
@@ -156,6 +157,11 @@
          * this will turn of receiving mode
          */
         void sgRF_disableBroadcastReceiver(sgRF_radio_t* radio);
+
+        /**
+         * on-air address of the packet carrying the given 32 byte chunk
+         */
+        uint32_t sgRF_chunkAddress(const uint8_t chunk);
 
         /**
          * check, if a new DmxFrame has been received and can be read from buffer
