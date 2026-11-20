@@ -42,6 +42,14 @@
 #include "dmx.h"
 #include "seeGridRF.h"
 
+/**
+ * Loopback test: radioB listens to one chunk address per frame (rotating
+ * through all 16) while radioA broadcasts. Every chunk carries its index as
+ * payload, so a received payload that differs from the listened chunk means
+ * a packet left with a wrong TX address. Check R_RX_PAYLOAD on CSN_B.
+ */
+#define RF_LOOPBACK_TEST
+
 #ifdef DEBUG
 
 typedef struct {
@@ -106,6 +114,53 @@ volatile debug_t debug = {0,0,0,0};
         .output_level = XMC_GPIO_OUTPUT_LEVEL_HIGH,
     };
 
+#ifdef RF_LOOPBACK_TEST
+    #define RB radioB.spiHardware, radioB.spiSelo, radioB.cePort, radioB.cePin
+
+    /* same modulation as the protocol: chunk bit 0 -> 0b01, bit 1 -> 0b10 */
+    static uint8_t loopback_chunkAddr(uint8_t chunk) {
+        uint8_t addr = 0;
+        for (int8_t b = 3; b >= 0; b--) {
+            addr = (addr << 2) | (((chunk >> b) & 1) ? 0b10 : 0b01);
+        }
+        return addr;
+    }
+
+    static void loopback_setup(void) {
+        for (uint16_t i = 0; i < sizeof(universe); i++) universe[i] = i / BROADCAST_PL_WITDH;
+
+        nrf24_setupFlags(RB, RX_DR_MASK);
+        nrf24_disableAutoAck(RB, 0xFF);
+        nrf24_setCrc(RB, CRC_OFF);
+        nrf24_disableRxAddr(RB, 0xFF);
+        nrf24_enableRxAddr(RB, 1 << 0);
+        nrf24_setAddrWidth(RB, W_3BYTES);
+        nrf24_setChannel(RB, BROADCAST_CH);
+        nrf24_setDataRate(RB, BROADCAST_DATARATE);
+        nrf24_setPayloadWidth(RB, 0, BROADCAST_PL_WITDH);
+        nrf24_setPrimRx(RB);
+    }
+
+    /* listen to one chunk; called before the broadcast */
+    static void loopback_listen(uint8_t chunk) {
+        XMC_GPIO_SetOutputLow(radioB.cePort, radioB.cePin);
+        nrf24_setRxAddr(RB, 0, FRAME_ADDR_BASE | loopback_chunkAddr(chunk));
+        nrf24_flushRx(RB);
+        nrf24_clearFlags(RB, RX_DR_MASK | TX_DS_MASK | MAX_RT_MASK);
+        XMC_GPIO_SetOutputHigh(radioB.cePort, radioB.cePin);
+        XMC_DelayUs(200);   /* RX settling 130us */
+    }
+
+    /* drain everything received; the payloads show up on the SPI bus */
+    static void loopback_collect(void) {
+        char payload[BROADCAST_PL_WITDH];
+        XMC_GPIO_SetOutputLow(radioB.cePort, radioB.cePin);
+        while (!nrf24_rxFifoEmpty(RB)) {
+            nrf24_readRx(RB, payload, 1, BROADCAST_PL_WITDH);
+        }
+    }
+#endif
+
     void IRQ3_Handler (void) {
         sgRF_radioIrqHandler(&radioA);
     }
@@ -132,6 +187,10 @@ int main(void)
     dmx_handle(&dmx);
     sgRF_init(&radioA);
     sgRF_init(&radioB);
+    #ifdef RF_LOOPBACK_TEST
+    loopback_setup();
+    uint8_t loopback_chunk = 0;
+    #endif
     XMC_Delay(250);
 
     for (;;)
@@ -139,9 +198,16 @@ int main(void)
         dmx_handle(&dmx);
 
         if (dmx_newFrame(&dmx) && sgRF_readyToBroadcast(&radioA)) {
+            #ifdef RF_LOOPBACK_TEST
+            loopback_listen(loopback_chunk);
+            #endif
             sgRF_enableBroadcastTransmitter(&radioA);
             sgRF_broadcastDmxFrame(&radioA, universe);
             sgRF_disableBroadcastTransmitter(&radioA);
+            #ifdef RF_LOOPBACK_TEST
+            loopback_collect();
+            loopback_chunk = (loopback_chunk + 1) % (512 / BROADCAST_PL_WITDH);
+            #endif
             dmx_clearFrame(&dmx);
         }
 

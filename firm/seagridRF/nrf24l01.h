@@ -151,6 +151,11 @@
     const bool nrf24_txFifoEmpty(NRF24_PARAMS);
 
     /**
+     *  true, if no payload is waiting in the RX FIFO
+     */
+    const bool nrf24_rxFifoEmpty(NRF24_PARAMS);
+
+    /**
      *  Flush TX FIFO, used in TX mode
      */
     void nrf24_flushTx(NRF24_PARAMS);

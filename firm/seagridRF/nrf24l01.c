@@ -532,19 +532,24 @@ extern volatile debug_t debug;
             XMC_SPI_CH_EnableSlaveSelect(spi, selo);
             XMC_USIC_CH_TXFIFO_Flush(spi);
             XMC_USIC_CH_RXFIFO_Flush(spi);
-            XMC_USIC_CH_SetFrameLength(spi, (1+len)*NRF_WLEN);
+            /* (1+32)*8 bit does not fit the 6 bit FLE field (and gets
+               truncated to 8 by the uint8_t parameter): use 64 = frame ends
+               when the TX buffer runs empty (FEM), so preload all words */
+            XMC_USIC_CH_SetFrameLength(spi, 64);
             XMC_USIC_CH_TXFIFO_PutData(spi, cmd);
-            while(XMC_USIC_CH_RXFIFO_IsEmpty(spi)) 
-            {}
-            status = (uint8_t) XMC_USIC_CH_RXFIFO_GetData(spi);
             for (int i = 0; i < len; i++){
                 XMC_USIC_CH_TXFIFO_PutData(spi, 0x00);
             }
+            while(XMC_USIC_CH_RXFIFO_IsEmpty(spi))
+            {}
+            status = (uint8_t) XMC_USIC_CH_RXFIFO_GetData(spi);
             while (bytes < len) {
                     while(XMC_USIC_CH_RXFIFO_IsEmpty(spi))
                     {}
                     *(data+bytes++) = (char) XMC_USIC_CH_RXFIFO_GetData(spi);
             }
+            /* unlimited frame: end it by hand, like _nrf24_writeTx */
+            XMC_SPI_CH_ClearStatusFlag(spi, XMC_SPI_CH_STATUS_FLAG_MSLS);
             #ifdef DEBUG
             debug.nrf24_status = status;
             #endif  

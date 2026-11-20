@@ -116,6 +116,17 @@ bool sgRF_init(sgRF_radio_t* radio){
      * User
      */
         
+    /**
+     * Wait until the TX FIFO is empty, i.e. queued packets are on air.
+     * Bound: 3 FIFO slots * ~420us airtime + margin.
+     */
+    static void _sgRF_waitTxDone(const sgRF_radio_t* radio) {
+        for (uint8_t i = 0; i < 40; i++) {
+            if (nrf24_txFifoEmpty(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin)) return;
+            XMC_DelayUs(50);
+        }
+    }
+
     bool sgRF_readyToBroadcast(sgRF_radio_t* radio) {
         if (radio->_state == STBY) return true;
         else return false;
@@ -151,12 +162,8 @@ bool sgRF_init(sgRF_radio_t* radio){
         /* check if BroadcastReceiver is active */
         if (radio->_state != GW_BROADCAST) return;
 
-        /* let queued packets go out, so their TX_DS still reaches the IRQ
-           handler; bound: 3 FIFO slots * ~420us airtime + margin */
-        for (uint8_t i = 0; i < 40; i++) {
-            if (nrf24_txFifoEmpty(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin)) break;
-            XMC_DelayUs(50);
-        }
+        /* let the last packet go out, so its TX_DS still reaches the IRQ handler */
+        _sgRF_waitTxDone(radio);
         /* anything left never got a CE pulse: drop it */
         nrf24_flushTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
@@ -181,6 +188,9 @@ bool sgRF_init(sgRF_radio_t* radio){
         while (dmx_chunk < chunks) {
             packet_addr = _chunk_addr_lookup_table[dmx_chunk];
             chunk_ptr = frame + (dmx_chunk * BROADCAST_PL_WITDH);
+            /* TX_ADDR is applied when a packet goes on air: never change it
+               while the previous one is still queued */
+            _sgRF_waitTxDone(radio);
             nrf24_setTxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, FRAME_ADDR_BASE | packet_addr);
             nrf24_writeTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)chunk_ptr, BROADCAST_PL_WITDH);
             /* pulse carrier enable */
@@ -237,6 +247,8 @@ bool sgRF_init(sgRF_radio_t* radio){
         if (!radio->_irq_pending) return;
         radio->_irq_pending = false;
 
+        /* bounded: a missing/hung radio must not block the main loop */
+        uint8_t tries = 4;
         do {
             const uint8_t irq_flags = nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
             nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, irq_flags);
@@ -255,7 +267,7 @@ bool sgRF_init(sgRF_radio_t* radio){
             if (irq_flags & MAX_RT_MASK) {
                 _sgRF_radioIqrHandler_Rt(radio);
             }
-        } while (XMC_GPIO_GetInput(radio->irqPort, radio->irqPin) == 0);
+        } while (--tries && XMC_GPIO_GetInput(radio->irqPort, radio->irqPin) == 0);
     }
 
     static inline const uint8_t _sgRF_translateAddress(const _sgRF_dmx_addr_t dmx_addr) {
