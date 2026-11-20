@@ -67,7 +67,7 @@ extern volatile debug_t debug;
     };
 
 
-void sgRF_init(sgRF_radio_t* radio){
+bool sgRF_init(sgRF_radio_t* radio){
 
     nrf24_init(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, radio->usic);
     /* enable irq system of xmc! */
@@ -75,12 +75,18 @@ void sgRF_init(sgRF_radio_t* radio){
 
     XMC_DelayUs(500);
 
-    while (nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin) != 0x0E) {
-        nrf24_reset(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
-        // FIXME trap
+    nrf24_reset(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+    /* after reset the status reads 0x0E; MISO stuck high (0xFF) = no radio */
+    if (nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin) != 0x0E) {
+        radio->_state = OFF;
+        return false;
     }
+
     nrf24_powerUp(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+    /* Tpd2stby: up to 1.5ms until standby-I is reached */
+    XMC_Delay(2);
     radio->_state = STBY;
+    return true;
 }
 
 /**
@@ -144,6 +150,15 @@ void sgRF_init(sgRF_radio_t* radio){
 
         /* check if BroadcastReceiver is active */
         if (radio->_state != GW_BROADCAST) return;
+
+        /* let queued packets go out, so their TX_DS still reaches the IRQ
+           handler; bound: 3 FIFO slots * ~420us airtime + margin */
+        for (uint8_t i = 0; i < 40; i++) {
+            if (nrf24_txFifoEmpty(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin)) break;
+            XMC_DelayUs(50);
+        }
+        /* anything left never got a CE pulse: drop it */
+        nrf24_flushTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
         XMC_GPIO_SetOutputLow(radio->cePort, radio->cePin);
         NVIC_DisableIRQ(radio->irqN);

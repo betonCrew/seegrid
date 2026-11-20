@@ -146,6 +146,11 @@
 
 
     /**
+     *  true, once every payload has left the TX FIFO
+     */
+    const bool nrf24_txFifoEmpty(NRF24_PARAMS);
+
+    /**
      *  Flush TX FIFO, used in TX mode
      */
     void nrf24_flushTx(NRF24_PARAMS);

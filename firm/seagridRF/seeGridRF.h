@@ -83,7 +83,7 @@
     typedef struct {
         XMC_USIC_t *const       usic;
         XMC_USIC_CH_t *const    spiHardware;
-        uint8_t const           spiSelo;
+        XMC_SPI_CH_SLAVE_SELECT_t const spiSelo;
         IRQn_Type               irqN;
         XMC_GPIO_PORT_t*        irqPort;
         uint8_t                 irqPin;
@@ -108,9 +108,10 @@
  */
 
     /**
-     * initialize the given hardware as seagrifRF radio!
+     * initialize the given hardware as seagridRF radio!
+     * returns false (state OFF) if no nRF answers on the bus
      */
-    void sgRF_init(sgRF_radio_t* radio);
+    bool sgRF_init(sgRF_radio_t* radio);
     void sgRF_handle(sgRF_radio_t* radio);
     void sgRF_radioIrqHandler(sgRF_radio_t* radio);
 

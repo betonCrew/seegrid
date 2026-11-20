@@ -149,6 +149,7 @@ volatile debug_t debug = {0,0,0,0};
     sgRF_radio_t radio = {
         .usic = USIC0,
         .spiHardware = RF_SPI_HW,
+        .spiSelo = XMC_SPI_CH_SLAVE_SELECT_0,
         .irqN = RF_IRQ_OGU_IRQN,
         .irqPort = RF_IRQ_PORT,
         .irqPin = RF_IRQ_PIN,

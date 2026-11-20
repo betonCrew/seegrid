@@ -36,7 +36,7 @@
 * DEALINGS IN THE SOFTWARE.
 *                                                                              
 *****************************************************************************/
-#define ioss_0_port_4_pin_8_ALT XMC_GPIO_MODE_OUTPUT_ALT7
+
 #include "cybsp.h"
 #include "cy_utils.h"
 #include "dmx.h"
@@ -77,7 +77,7 @@ volatile debug_t debug = {0,0,0,0};
     sgRF_radio_t radioA = {
         .usic = USIC1,
         .spiHardware = usic_1_ch_0_HW,
-        .spiSelo = 0,
+        .spiSelo = XMC_SPI_CH_SLAVE_SELECT_0,
         .irqN = IRQ3_IRQn,
         .irqPort = RF_IRQ_A_PORT,
         .irqPin = RF_IRQ_A_PIN,
@@ -90,7 +90,7 @@ volatile debug_t debug = {0,0,0,0};
     sgRF_radio_t radioB = {
         .usic = USIC1,
         .spiHardware = usic_1_ch_0_HW,
-        .spiSelo = 1,
+        .spiSelo = XMC_SPI_CH_SLAVE_SELECT_1,
         .irqN = IRQ9_IRQn,
         .irqPort = RF_IRQ_B_PORT,
         .irqPin = RF_IRQ_B_PIN,
@@ -100,11 +100,11 @@ volatile debug_t debug = {0,0,0,0};
         .data = universe
     };
 
-    // const XMC_GPIO_CONFIG_t RF_CSN_B_config = 
-    // {
-    //     .mode = (XMC_GPIO_MODE_t)(XMC_GPIO_MODE_OUTPUT_PUSH_PULL | XMC_GPIO_MODE_OUTPUT_ALT7),
-    //     .output_level = XMC_GPIO_OUTPUT_LEVEL_LOW,
-    // };
+    /* design.modus configures P4.8 as plain GPIO; route it to USIC1_CH0.SELO1 */
+    static const XMC_GPIO_CONFIG_t RF_CSN_B_selo_config = {
+        .mode = (XMC_GPIO_MODE_t)(XMC_GPIO_MODE_OUTPUT_PUSH_PULL | P4_8_AF_U1C0_SELO1),
+        .output_level = XMC_GPIO_OUTPUT_LEVEL_HIGH,
+    };
 
     void IRQ3_Handler (void) {
         sgRF_radioIrqHandler(&radioA);
@@ -125,8 +125,7 @@ int main(void)
         CY_ASSERT(0);
     }
 
-    // FIXME setup selo1 pin!
-    // XMC_GPIO_Init(RF_CSN_B_PORT, RF_CSN_B_PIN, &RF_CSN_B_config);
+    XMC_GPIO_Init(RF_CSN_B_PORT, RF_CSN_B_PIN, &RF_CSN_B_selo_config);
 
     SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
 

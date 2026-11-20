@@ -31,9 +31,17 @@ extern volatile debug_t debug;
  * Reset Device
  */
 
+    /**
+     * The nRF keeps its state across an MCU reset: power it down and drop
+     * FIFO contents and pending flags (leftover TX payloads set TX_FULL).
+     */
     void nrf24_reset(NRF24_PARAMS) {
-        /* set every register to its reset state is supposed to reset device */
-        
+        XMC_GPIO_SetOutputLow(ce_port, ce_pin);
+        const char config = NRF_CONFIG_RES_STATE;
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
+        nrf24_flushTx(spi, selo, ce_port, ce_pin);
+        nrf24_flushRx(spi, selo, ce_port, ce_pin);
+        nrf24_clearFlags(spi, selo, ce_port, ce_pin, RX_DR_MASK | TX_DS_MASK | MAX_RT_MASK);
     }
 
 /**
@@ -195,6 +203,9 @@ extern volatile debug_t debug;
         const uint8_t cmd = NRF_NOP;
         uint8_t status;
         XMC_SPI_CH_EnableSlaveSelect(spi, selo);
+        /* drop words left over from earlier transfers, else we read stale data */
+        XMC_USIC_CH_TXFIFO_Flush(spi);
+        XMC_USIC_CH_RXFIFO_Flush(spi);
         XMC_USIC_CH_SetFrameLength(spi, 1*NRF_WLEN);
         XMC_USIC_CH_TXFIFO_PutData(spi, cmd);
         while(XMC_USIC_CH_RXFIFO_IsEmpty(spi))
@@ -432,7 +443,7 @@ extern volatile debug_t debug;
      * Register Read/Write
      */
 
-        void _nrf24_readReg(XMC_USIC_CH_t *const spi, uint8_t const selo, const uint8_t addr, char* data, const uint8_t len) {
+        void _nrf24_readReg(XMC_USIC_CH_t *const spi, XMC_SPI_CH_SLAVE_SELECT_t const selo, const uint8_t addr, char* data, const uint8_t len) {
             const uint8_t cmd = R_REGISTER | (REGISTER_MASK & addr);
             uint8_t bytes = 0;
             // TODO do something with this fresh status
@@ -460,7 +471,7 @@ extern volatile debug_t debug;
             XMC_DelayUs(5);
         }
 
-        void _nrf24_writeReg(XMC_USIC_CH_t *const spi, uint8_t const selo, const uint8_t addr, const char* data, const uint8_t len) {
+        void _nrf24_writeReg(XMC_USIC_CH_t *const spi, XMC_SPI_CH_SLAVE_SELECT_t const selo, const uint8_t addr, const char* data, const uint8_t len) {
             const uint8_t cmd = W_REGISTER | (REGISTER_MASK & addr);
             uint8_t bytes = len;
             uint8_t status;
@@ -487,7 +498,7 @@ extern volatile debug_t debug;
      * FIFO Read/Write
      */
 
-        void _nrf24_writeTx(XMC_USIC_CH_t *const spi, uint8_t const selo, const char* data, const uint8_t len) {
+        void _nrf24_writeTx(XMC_USIC_CH_t *const spi, XMC_SPI_CH_SLAVE_SELECT_t const selo, const char* data, const uint8_t len) {
             const uint8_t cmd = W_TX_PAYLOAD;
             uint8_t bytes = len;
             uint8_t status;
@@ -514,7 +525,7 @@ extern volatile debug_t debug;
             
         }
 
-        void _nrf24_readRx(XMC_USIC_CH_t *const spi, uint8_t const selo, char* data, const uint8_t len) {
+        void _nrf24_readRx(XMC_USIC_CH_t *const spi, XMC_SPI_CH_SLAVE_SELECT_t const selo, char* data, const uint8_t len) {
             const uint8_t cmd = R_RX_PAYLOAD;
             uint8_t bytes = 0;
             uint8_t status;
