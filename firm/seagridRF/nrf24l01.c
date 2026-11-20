@@ -42,16 +42,16 @@ extern volatile debug_t debug;
 
     void nrf24_powerDown(NRF24_PARAMS) {
         char config;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config &= ~PWR_UP_MASK;
-        _nrf24_writeReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 
     void nrf24_powerUp(NRF24_PARAMS) {
         char config;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config |= PWR_UP_MASK;
-        _nrf24_writeReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 
 /**
@@ -60,16 +60,16 @@ extern volatile debug_t debug;
 
     void nrf24_setPrimTx(NRF24_PARAMS) {
         char config = 0;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config &= ~PRIM_RX_MASK;
-        _nrf24_writeReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 
     void nrf24_setPrimRx(NRF24_PARAMS) {
         char config = 0;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config |= PRIM_RX_MASK;
-        _nrf24_writeReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 
 
@@ -89,13 +89,13 @@ extern volatile debug_t debug;
 
     void nrf24_getChannel(NRF24_PARAMS, uint8_t* channel) {
         char rf_ch = 0;
-        _nrf24_readReg(spi, NRF_RF_CH, &rf_ch, 1);
+        _nrf24_readReg(spi, selo, NRF_RF_CH, &rf_ch, 1);
         *channel = rf_ch;
     }
 
     void nrf24_setChannel(NRF24_PARAMS, const uint8_t channel) {
-        char rf_ch = channel & 0x01111111;
-        _nrf24_writeReg(spi, NRF_RF_CH, &rf_ch, 1);
+        char rf_ch = channel & 0b01111111;
+        _nrf24_writeReg(spi, selo, NRF_RF_CH, &rf_ch, 1);
     }
 
 /**
@@ -104,15 +104,15 @@ extern volatile debug_t debug;
 
     void nrf24_setPowerLevel(NRF24_PARAMS, const nrf24_rfPwr_t level) {
         char rf_setup = 0;
-        _nrf24_readReg(spi, NRF_RF_SETUP, &rf_setup, 1);
+        _nrf24_readReg(spi, selo, NRF_RF_SETUP, &rf_setup, 1);
         rf_setup &= ~RF_PWR_MASK;
         rf_setup |= (level << RF_PWR_BIT);
-        _nrf24_writeReg(spi, NRF_RF_SETUP, &rf_setup, 1);
+        _nrf24_writeReg(spi, selo, NRF_RF_SETUP, &rf_setup, 1);
     }
 
     const nrf24_rfPwr_t nrf24_getPowerLevel(NRF24_PARAMS) {
         char rf_setup = 0;
-        _nrf24_readReg(spi, NRF_RF_SETUP, &rf_setup, 1);
+        _nrf24_readReg(spi, selo, NRF_RF_SETUP, &rf_setup, 1);
         return((nrf24_rfPwr_t)((rf_setup & RF_PWR_MASK) >> RF_PWR_BIT));
     }
 
@@ -122,13 +122,13 @@ extern volatile debug_t debug;
 
     void nrf24_setDataRate(NRF24_PARAMS, const nrf24_dataRate_t rate) {
         char rf_setup = 0;
-        _nrf24_readReg(spi, NRF_RF_SETUP, &rf_setup, 1);
+        _nrf24_readReg(spi, selo, NRF_RF_SETUP, &rf_setup, 1);
         rf_setup &= ~(RF_DR_H_MASK | RF_DR_L_MASK);
         /* L_Bit (5) is bit 1 in rate */
         rf_setup |= RF_DR_L_MASK & (rate << (RF_DR_L_BIT-1));
         /* H_Bit (3) is bit 0 in rate */
         rf_setup |= RF_DR_H_MASK & (rate << RF_DR_H_BIT);
-        _nrf24_writeReg(spi, NRF_RF_SETUP, &rf_setup, 1);
+        _nrf24_writeReg(spi, selo, NRF_RF_SETUP, &rf_setup, 1);
     }
 
 
@@ -138,12 +138,12 @@ extern volatile debug_t debug;
 
     void nrf24_setAddrWidth(NRF24_PARAMS, const nrf24_aW_t addrWidth) {
         const char width = addrWidth & AW_MASK;
-        _nrf24_writeReg(spi, NRF_SETUP_AW, &width, 1);
+        _nrf24_writeReg(spi, selo, NRF_SETUP_AW, &width, 1);
     }
 
     nrf24_aW_t nrf24_getAddrWidth(NRF24_PARAMS) {
         char width = 0;
-        _nrf24_readReg(spi, NRF_SETUP_AW, &width, 1);
+        _nrf24_readReg(spi, selo, NRF_SETUP_AW, &width, 1);
         width &= AW_MASK;
         return width;
     }
@@ -154,15 +154,15 @@ extern volatile debug_t debug;
 
     void nrf24_setCrc(NRF24_PARAMS, const nrf24_crc_t scheme) {
         char config = 0;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config &= ~(EN_CRC_MASK | CRC0_MASK);
         config |= scheme << CRCO_BIT;
-        _nrf24_writeReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 
     const nrf24_crc_t nrf24_getCrc(NRF24_PARAMS) {
         char config = 0;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config &= (CRC0_MASK | EN_CRC_MASK);
         config >>= CRCO_BIT;
         return config;
@@ -174,10 +174,10 @@ extern volatile debug_t debug;
 
     void nrf24_setupFlags(NRF24_PARAMS, const uint8_t flags) {
         char config = 0;
-        _nrf24_readReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
         config &= ~(MASK_RX_DR_MASK | MASK_MAX_RT_MASK | MASK_TX_DS_MASK);
         config |= flags & (MASK_RX_DR_MASK | MASK_TX_DS_MASK | MASK_MAX_RT_MASK);
-        _nrf24_writeReg(spi, NRF_CONFIG, &config, 1);
+        _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 
 /**
@@ -186,13 +186,14 @@ extern volatile debug_t debug;
 
     void nrf24_clearFlags(NRF24_PARAMS, const uint8_t flags) {
         const char status = flags & (RX_DR_MASK | TX_DS_MASK | MAX_RT_MASK);
-        _nrf24_writeReg(spi, NRF_STATUS, &status, 1);
+        _nrf24_writeReg(spi, selo, NRF_STATUS, &status, 1);
     }
 
     const uint8_t nrf24_readStatus(NRF24_PARAMS) {
         
         const uint8_t cmd = NRF_NOP;
         uint8_t status;
+        XMC_SPI_CH_EnableSlaveSelect(spi, selo);
         XMC_USIC_CH_SetFrameLength(spi, 1*NRF_WLEN);
         XMC_USIC_CH_TXFIFO_PutData(spi, cmd);
         while(XMC_USIC_CH_RXFIFO_IsEmpty(spi))
@@ -215,16 +216,16 @@ extern volatile debug_t debug;
 
     void nrf24_disableAutoAck(NRF24_PARAMS, const uint8_t ch_mask) {
         char pipes = 0;
-        _nrf24_readReg(spi, NRF_EN_AA, &pipes, 1);
+        _nrf24_readReg(spi, selo, NRF_EN_AA, &pipes, 1);
         pipes &= ~ch_mask;
-        _nrf24_writeReg(spi, NRF_EN_AA, &pipes, 1);
+        _nrf24_writeReg(spi, selo, NRF_EN_AA, &pipes, 1);
     }
 
     void nrf24_enableAutoAck(NRF24_PARAMS, const uint8_t ch_mask) {
         char pipes = 0;
-        _nrf24_readReg(spi, NRF_EN_AA, &pipes, 1);
+        _nrf24_readReg(spi, selo, NRF_EN_AA, &pipes, 1);
         pipes |= ch_mask;
-        _nrf24_writeReg(spi, NRF_EN_AA, &pipes, 1);
+        _nrf24_writeReg(spi, selo, NRF_EN_AA, &pipes, 1);
     }
 
 /**
@@ -233,7 +234,7 @@ extern volatile debug_t debug;
 
     void nrf24_disableAutoRetransmit(NRF24_PARAMS) {
         char retrans = 0;
-        _nrf24_writeReg(spi, NRF_SETUP_RETR, &retrans, 1);
+        _nrf24_writeReg(spi, selo, NRF_SETUP_RETR, &retrans, 1);
     }
 
 /**
@@ -242,16 +243,16 @@ extern volatile debug_t debug;
 
     void nrf24_enableRxAddr(NRF24_PARAMS, uint8_t pipe_mask) {
         char reg = 0;
-        _nrf24_readReg(spi, NRF_EN_RXADDR, &reg, 1);
+        _nrf24_readReg(spi, selo, NRF_EN_RXADDR, &reg, 1);
         reg |= pipe_mask & 0x3F;
-        _nrf24_writeReg(spi, NRF_EN_RXADDR, &reg, 1);
+        _nrf24_writeReg(spi, selo, NRF_EN_RXADDR, &reg, 1);
     }
 
     void nrf24_disableRxAddr(NRF24_PARAMS, uint8_t pipe_mask) {
         char reg = 0;
-        _nrf24_readReg(spi, NRF_EN_RXADDR, &reg, 1);
+        _nrf24_readReg(spi, selo, NRF_EN_RXADDR, &reg, 1);
         reg &= ~(pipe_mask & 0x3F);
-        _nrf24_writeReg(spi, NRF_EN_RXADDR, &reg, 1);
+        _nrf24_writeReg(spi, selo, NRF_EN_RXADDR, &reg, 1);
     }
 
 /**
@@ -259,12 +260,12 @@ extern volatile debug_t debug;
  */
 
     void nrf24_setTxAddr(NRF24_PARAMS, const uint64_t addr) {
-        _nrf24_writeReg(spi, NRF_TX_ADDR, (char*)&addr, 5);
+        _nrf24_writeReg(spi, selo, NRF_TX_ADDR, (char*)&addr, 5);
     }
 
     const uint64_t nrf24_getTxAddr(NRF24_PARAMS) {
         uint64_t addr = 0;
-        _nrf24_readReg(spi, NRF_TX_ADDR, (char*)&addr, 5);
+        _nrf24_readReg(spi, selo, NRF_TX_ADDR, (char*)&addr, 5);
         return addr;
     }
 
@@ -275,12 +276,12 @@ extern volatile debug_t debug;
     void nrf24_setRxAddr(NRF24_PARAMS, const uint8_t pipe, const uint64_t addr) {
         if (pipe >= 6) return;
         /* there is a rx addr register for each pipe starting at 0x0A*/
-        _nrf24_writeReg(spi, NRF_RX_ADDR_P0+pipe, (char*)&addr, 5);
+        _nrf24_writeReg(spi, selo, NRF_RX_ADDR_P0+pipe, (char*)&addr, 5);
     }
 
     const uint64_t nrf24_getRxAddr(NRF24_PARAMS, const uint8_t pipe) {
         uint64_t addr = 0;
-        _nrf24_readReg(spi, NRF_RX_ADDR_P0+pipe, (char*)&addr, 5);
+        _nrf24_readReg(spi, selo, NRF_RX_ADDR_P0+pipe, (char*)&addr, 5);
         return addr;
     }
 
@@ -290,13 +291,13 @@ extern volatile debug_t debug;
 
     void nrf24_setPayloadWidth(NRF24_PARAMS, const uint8_t pipe, const uint8_t width) {
         if (pipe >= 6) return;
-        _nrf24_writeReg(spi, NRF_RX_PW_P0+pipe, (char*)&width, 1);
+        _nrf24_writeReg(spi, selo, NRF_RX_PW_P0+pipe, (char*)&width, 1);
     }
 
     const uint8_t nrf24_getPayloadWidth(NRF24_PARAMS, const uint8_t pipe) {
         if (pipe >= 6) return 0x00;
         char width;
-        _nrf24_readReg(spi, NRF_RX_PW_P0+pipe, (char*)&width, 1);
+        _nrf24_readReg(spi, selo, NRF_RX_PW_P0+pipe, (char*)&width, 1);
         return width;        
     }
 
@@ -306,24 +307,24 @@ extern volatile debug_t debug;
 
     const bool nrf24_txFifoEmpty(NRF24_PARAMS) {
         char status;
-        _nrf24_readReg(spi, NRF_FIFO_STATUS, &status, 1);
+        _nrf24_readReg(spi, selo, NRF_FIFO_STATUS, &status, 1);
         return (status & TX_EMPTY_MASK);
     }
 
     const bool nrf24_txFifoFull(NRF24_PARAMS) {
-        const char status = nrf24_readStatus(spi, ce_port, ce_pin);
+        const char status = nrf24_readStatus(spi, selo, ce_port, ce_pin);
         return (status & TX_FIFO_FULL_MASK);
     }
  
     const bool nrf24_rxFifoEmpty(NRF24_PARAMS) {
         char status;
-        _nrf24_readReg(spi, NRF_FIFO_STATUS, &status, 1);
+        _nrf24_readReg(spi, selo, NRF_FIFO_STATUS, &status, 1);
         return (status & RX_EMPTY_MASK);
     }
 
     const bool nrf24_rxFifoFull(NRF24_PARAMS) {
         char status;
-        _nrf24_readReg(spi, NRF_FIFO_STATUS, &status, 1);
+        _nrf24_readReg(spi, selo, NRF_FIFO_STATUS, &status, 1);
         return (status & RX_FULL_MASK);
     }
 
@@ -333,16 +334,16 @@ extern volatile debug_t debug;
 
     void nrf24_disableDynPayload(NRF24_PARAMS, const uint8_t ch_mask) {
         char pipes = 0;
-        _nrf24_readReg(spi, NRF_DYNPD, &pipes, 1);
+        _nrf24_readReg(spi, selo, NRF_DYNPD, &pipes, 1);
         pipes &= ~ch_mask;
-        _nrf24_writeReg(spi, NRF_DYNPD, &pipes, 1);
+        _nrf24_writeReg(spi, selo, NRF_DYNPD, &pipes, 1);
     }
 
     void nrf24_enableDynPayload(NRF24_PARAMS, const uint8_t ch_mask) {
         char pipes = 0;
-        _nrf24_readReg(spi, NRF_DYNPD, &pipes, 1);
+        _nrf24_readReg(spi, selo, NRF_DYNPD, &pipes, 1);
         pipes |= ch_mask;
-        _nrf24_writeReg(spi, NRF_DYNPD, &pipes, 1);
+        _nrf24_writeReg(spi, selo, NRF_DYNPD, &pipes, 1);
     }
 
 /**
@@ -360,9 +361,9 @@ extern volatile debug_t debug;
     void nrf24_readRx(NRF24_PARAMS, char* data, const uint8_t payloads, const uint8_t width) {
         uint8_t i = 0;
         while(i < payloads)
-            if(!nrf24_rxFifoEmpty(spi, ce_port, ce_pin)) {
-                _nrf24_readRx(spi, (data+(i*width)), width);
-                nrf24_clearFlags(spi, ce_port, ce_pin, RX_DR_MASK);
+            if(!nrf24_rxFifoEmpty(spi, selo, ce_port, ce_pin)) {
+                _nrf24_readRx(spi, selo, (data+(i*width)), width);
+                nrf24_clearFlags(spi, selo, ce_port, ce_pin, RX_DR_MASK);
                 i++;
             }
             // FIXME some kind of timeout?
@@ -371,8 +372,8 @@ extern volatile debug_t debug;
     void nrf24_writeTx(NRF24_PARAMS, const char* data, const uint8_t width) {
         bool succ = false;
         while (!succ) {
-            if(!nrf24_txFifoFull(spi, ce_port, ce_pin)) {
-                _nrf24_writeTx(spi, data, width);
+            if(!nrf24_txFifoFull(spi, selo, ce_port, ce_pin)) {
+                _nrf24_writeTx(spi, selo, data, width);
                 succ = true;
             }
             // FIXME some kind of timeout?
@@ -387,6 +388,7 @@ extern volatile debug_t debug;
         const uint8_t cmd = FLUSH_TX;
         uint8_t status;
 
+        XMC_SPI_CH_EnableSlaveSelect(spi, selo);
         XMC_USIC_CH_TXFIFO_Flush(spi);
         XMC_USIC_CH_RXFIFO_Flush(spi);
 
@@ -405,6 +407,7 @@ extern volatile debug_t debug;
         const uint8_t cmd = FLUSH_RX;
         uint8_t status;
 
+        XMC_SPI_CH_EnableSlaveSelect(spi, selo);
         XMC_USIC_CH_TXFIFO_Flush(spi);
         XMC_USIC_CH_RXFIFO_Flush(spi);
 
@@ -428,12 +431,13 @@ extern volatile debug_t debug;
      * Register Read/Write
      */
 
-        void _nrf24_readReg(XMC_USIC_CH_t *const spi, const uint8_t addr, char* data, const uint8_t len) {
+        void _nrf24_readReg(XMC_USIC_CH_t *const spi, uint8_t const selo, const uint8_t addr, char* data, const uint8_t len) {
             const uint8_t cmd = R_REGISTER | (REGISTER_MASK & addr);
             uint8_t bytes = 0;
             // TODO do something with this fresh status
             uint8_t status;
 
+            XMC_SPI_CH_EnableSlaveSelect(spi, selo);
             XMC_USIC_CH_TXFIFO_Flush(spi);
             XMC_USIC_CH_RXFIFO_Flush(spi);
             XMC_USIC_CH_SetFrameLength(spi, (1+len)*NRF_WLEN);
@@ -455,10 +459,11 @@ extern volatile debug_t debug;
             XMC_DelayUs(5);
         }
 
-        void _nrf24_writeReg(XMC_USIC_CH_t *const spi, const uint8_t addr, const char* data, const uint8_t len) {
+        void _nrf24_writeReg(XMC_USIC_CH_t *const spi, uint8_t const selo, const uint8_t addr, const char* data, const uint8_t len) {
             const uint8_t cmd = W_REGISTER | (REGISTER_MASK & addr);
             uint8_t bytes = len;
             uint8_t status;
+            XMC_SPI_CH_EnableSlaveSelect(spi, selo);
             XMC_USIC_CH_TXFIFO_Flush(spi);
             XMC_USIC_CH_RXFIFO_Flush(spi);
             XMC_USIC_CH_SetFrameLength(spi, (1+len)*NRF_WLEN);
@@ -481,10 +486,11 @@ extern volatile debug_t debug;
      * FIFO Read/Write
      */
 
-        void _nrf24_writeTx(XMC_USIC_CH_t *const spi, const char* data, const uint8_t len) {
+        void _nrf24_writeTx(XMC_USIC_CH_t *const spi, uint8_t const selo, const char* data, const uint8_t len) {
             const uint8_t cmd = W_TX_PAYLOAD;
             uint8_t bytes = len;
             uint8_t status;
+            XMC_SPI_CH_EnableSlaveSelect(spi, selo);
             XMC_USIC_CH_TXFIFO_Flush(spi);
             XMC_USIC_CH_RXFIFO_Flush(spi);
             /* control framelength by hand! */
@@ -507,10 +513,11 @@ extern volatile debug_t debug;
             
         }
 
-        void _nrf24_readRx(XMC_USIC_CH_t *const spi, char* data, const uint8_t len) {
+        void _nrf24_readRx(XMC_USIC_CH_t *const spi, uint8_t const selo, char* data, const uint8_t len) {
             const uint8_t cmd = R_RX_PAYLOAD;
             uint8_t bytes = 0;
             uint8_t status;
+            XMC_SPI_CH_EnableSlaveSelect(spi, selo);
             XMC_USIC_CH_TXFIFO_Flush(spi);
             XMC_USIC_CH_RXFIFO_Flush(spi);
             XMC_USIC_CH_SetFrameLength(spi, (1+len)*NRF_WLEN);

@@ -75,6 +75,8 @@ volatile debug_t debug = {0,0,0,0};
     /* SysTick */
     #define TICKS_PER_SECOND 1000
     volatile uint32_t msTicks = 0;
+
+    uint8_t universe[512];
     
     /* Timetable */
     static cue_t _saturday[] = {
@@ -144,21 +146,21 @@ volatile debug_t debug = {0,0,0,0};
     //     .init = false
     // };
 
-    // sgRF_radio_t radio = {
-    //     .usic = USIC0,
-    //     .spiHardware = RF_SPI_HW,
-    //     .irqN = RF_IRQ_OGU_IRQN,
-    //     .cePort = RF_CE_PORT,
-    //     .cePin = RF_CE_PIN,
-    //     .irqPort = RF_IRQ_PORT,
-    //     .irqPin = RF_IRQ_PIN,
-    //     .mode = FIXTURE,
-    //     .data = universe,
-    // };
+    sgRF_radio_t radio = {
+        .usic = USIC0,
+        .spiHardware = RF_SPI_HW,
+        .irqN = RF_IRQ_OGU_IRQN,
+        .irqPort = RF_IRQ_PORT,
+        .irqPin = RF_IRQ_PIN,
+        .cePort = RF_CE_PORT,
+        .cePin = RF_CE_PIN,
+        .mode = FIXTURE,
+        .data = universe,
+    };
 
-    // void RF_IRQ_OGU_INTERRUPT_HANDLER(void) {
-    //     sgRF_radioIrqHandler(&radio);
-    // }
+    void RF_IRQ_OGU_INTERRUPT_HANDLER(void) {
+        sgRF_radioIrqHandler(&radio);
+    }
 
 
 
@@ -180,7 +182,7 @@ volatile debug_t debug = {0,0,0,0};
         led_init(&led);
         // battLvl_init(&batt);
         // boostCon_init(&boost);
-        // sgRF_init(&radio);
+        sgRF_init(&radio);
 
         /* test sequence */
         led_enable(&led);
@@ -191,21 +193,19 @@ volatile debug_t debug = {0,0,0,0};
         }
         led_setColorPreset(&led, COL_BLACK);
         led_setWhite(&led, 0x0000);
+        led_disable(&led);
 
-        saturday.index = 0;
+
+        sgRF_enableBroadcastReceiver(&radio);
+
 
         for (;;)
         {
-            /* Decide about current cue */
-            const uint32_t rtc_flags = XMC_RTC_GetEventStatus();
-            if (rtc_flags & XMC_RTC_EVENT_ALARM) {
-                nextCue(&saturday);
-                XMC_RTC_ClearEvent(XMC_RTC_EVENT_ALARM);
-            }
+            sgRF_handle(&radio);
 
-            /* Run Cue */
-            const cue_t* current = saturday.data + saturday.index;
-            ledFx_run(&led, current->fx, current->col);
+            if (sgRF_receivedFrame(&radio)) {
+                const sgRF_fixFrame_t frame = sgRF_readFrame(&radio);
+            }
         }
     }
 

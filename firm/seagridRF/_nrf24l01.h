@@ -5,7 +5,7 @@
 #include "cybsp.h"
 #include "cy_utils.h"
 
-#define XMC_RADIO_PARAMS    XMC_USIC_CH_t *const spi, XMC_GPIO_PORT_t* ce_port, uint8_t ce_pin
+#define XMC_RADIO_PARAMS    XMC_USIC_CH_t *const spi, uint8_t const selo, XMC_GPIO_PORT_t* ce_port, uint8_t ce_pin
 
 #ifdef XMC1
     #define NRF24_PARAMS XMC_RADIO_PARAMS
@@ -245,7 +245,7 @@
      *  Read command and status registers.
      *      addr - 5 bit Register Map Address
      */
-    void _nrf24_readReg(XMC_USIC_CH_t *const spi, const uint8_t addr, char* data, const uint8_t len);
+    void _nrf24_readReg(XMC_USIC_CH_t *const spi, uint8_t const selo, const uint8_t addr, char* data, const uint8_t len);
 
     /**
      *  Write command and status registers.
@@ -253,17 +253,17 @@
      * 
      *  Executable in power down or standby modesonly.
      */
-    void _nrf24_writeReg(XMC_USIC_CH_t *const spi, const uint8_t addr, const char* data, const uint8_t len);
+    void _nrf24_writeReg(XMC_USIC_CH_t *const spi, uint8_t const selo, const uint8_t addr, const char* data, const uint8_t len);
 
     /**
      *  Write a packet wird len words into TX-Fifo
      */
-    void _nrf24_writeTx(XMC_USIC_CH_t *const spi, const char* data, const uint8_t len);
+    void _nrf24_writeTx(XMC_USIC_CH_t *const spi, uint8_t const selo, const char* data, const uint8_t len);
 
     /**
      *  Read len words from RX-Fifo
      */
-    void _nrf24_readRx(XMC_USIC_CH_t *const spi, char* data, const uint8_t len);
+    void _nrf24_readRx(XMC_USIC_CH_t *const spi, uint8_t const selo, char* data, const uint8_t len);
 
 
 

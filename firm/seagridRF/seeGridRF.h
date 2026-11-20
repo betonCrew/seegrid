@@ -37,7 +37,7 @@
     #define FRAME_ADDR_WIDTH    3
     #define FRAME_ADDR_BASE     (0b10101010 << 16 | 0b10101010 << 8)
 
-    #define BROADCAST_CH        128
+    #define BROADCAST_CH        125
     #define BROADCAST_DATARATE  R_1Mbps
     #define BROADCAST_POWER     P_0dBM
     #define BROADCAST_RX_PIPE   0
@@ -83,6 +83,7 @@
     typedef struct {
         XMC_USIC_t *const       usic;
         XMC_USIC_CH_t *const    spiHardware;
+        uint8_t const           spiSelo;
         IRQn_Type               irqN;
         XMC_GPIO_PORT_t*        irqPort;
         uint8_t                 irqPin;

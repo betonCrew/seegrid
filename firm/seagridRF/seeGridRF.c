@@ -69,17 +69,17 @@ extern volatile debug_t debug;
 
 void sgRF_init(sgRF_radio_t* radio){
 
-    nrf24_init(radio->spiHardware, radio->cePort, radio->cePin, radio->usic);
+    nrf24_init(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, radio->usic);
     /* enable irq system of xmc! */
     __enable_irq();
 
     XMC_DelayUs(500);
 
-    while (nrf24_readStatus(radio->spiHardware, radio->cePort, radio->cePin) != 0x0E) {
-        nrf24_reset(radio->spiHardware, radio->cePort, radio->cePin);
+    while (nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin) != 0x0E) {
+        nrf24_reset(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
         // FIXME trap
     }
-    nrf24_powerUp(radio->spiHardware, radio->cePort, radio->cePin);
+    nrf24_powerUp(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
     radio->_state = STBY;
 }
 
@@ -120,19 +120,19 @@ void sgRF_init(sgRF_radio_t* radio){
         /* check if ready / set state */
         if(!_sgRF_setState(radio, GW_BROADCAST)) return;
 
-        nrf24_setupFlags(radio->spiHardware, radio->cePort, radio->cePin, TX_DS_MASK);
-        nrf24_clearFlags(radio->spiHardware, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
-        nrf24_disableAutoAck(radio->spiHardware, radio->cePort, radio->cePin, 0xFF);
-        nrf24_setCrc(radio->spiHardware, radio->cePort, radio->cePin, CRC_OFF);
-        nrf24_disableRxAddr(radio->spiHardware, radio->cePort, radio->cePin, 0xFF);
-        nrf24_setAddrWidth(radio->spiHardware, radio->cePort, radio->cePin, W_3BYTES);
-        nrf24_disableAutoRetransmit(radio->spiHardware, radio->cePort, radio->cePin);
+        nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, TX_DS_MASK);
+        nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
+        nrf24_disableAutoAck(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
+        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CRC_OFF);
+        nrf24_disableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
+        nrf24_setAddrWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, W_3BYTES);
+        nrf24_disableAutoRetransmit(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
-        nrf24_setChannel(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_CH);
-        nrf24_setDataRate(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_DATARATE);
-        nrf24_setPowerLevel(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_POWER);
+        nrf24_setChannel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_CH);
+        nrf24_setDataRate(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_DATARATE);
+        nrf24_setPowerLevel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_POWER);
 
-        nrf24_setPrimTx(radio->spiHardware, radio->cePort, radio->cePin);
+        nrf24_setPrimTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
 
         NVIC_SetPriority(radio->irqN, 0);
@@ -161,13 +161,13 @@ void sgRF_init(sgRF_radio_t* radio){
         /* chunk pointer points to chunk-beginn in dmx universe*/
         const uint8_t* chunk_ptr;
         
-        nrf24_flushTx(radio->spiHardware, radio->cePort, radio->cePin);
+        nrf24_flushTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
         while (dmx_chunk < chunks) {
             packet_addr = _chunk_addr_lookup_table[dmx_chunk];
             chunk_ptr = frame + (dmx_chunk * BROADCAST_PL_WITDH);
-            nrf24_setTxAddr(radio->spiHardware, radio->cePort, radio->cePin, FRAME_ADDR_BASE | packet_addr);
-            nrf24_writeTx(radio->spiHardware, radio->cePort, radio->cePin, (char*)chunk_ptr, BROADCAST_PL_WITDH);
+            nrf24_setTxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, FRAME_ADDR_BASE | packet_addr);
+            nrf24_writeTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)chunk_ptr, BROADCAST_PL_WITDH);
             /* pulse carrier enable */
             XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
             XMC_DelayUs(15);
@@ -206,20 +206,20 @@ void sgRF_init(sgRF_radio_t* radio){
 
     inline void sgRF_radioIrqHandler(sgRF_radio_t* radio) {
 
-        const uint8_t irq_flags = nrf24_readStatus(radio->spiHardware, radio->cePort, radio->cePin);
+        const uint8_t irq_flags = nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
         /* Data Ready RX FiFo */
-        if (irq_flags && RX_DR_MASK) {
+        if (irq_flags & RX_DR_MASK) {
             _sgRF_radioIrqHandler_Rx(radio, (RX_P_NO_MASK&irq_flags)>>RX_P_NO_BIT);
         }
 
         /* Data Sent TX FiFo */
-        if (irq_flags && TX_DS_MASK) {
+        if (irq_flags & TX_DS_MASK) {
             _sgRF_radioIrqHandler_Tx(radio);
         }
 
         /* Max Transmit Retries reached */
-        if (irq_flags && MAX_RT_MASK) {
+        if (irq_flags & MAX_RT_MASK) {
             _sgRF_radioIqrHandler_Rt(radio);
         }
 
@@ -249,20 +249,20 @@ void sgRF_init(sgRF_radio_t* radio){
         const uint8_t dmx_chunk_addr = _sgRF_translateAddress(radio->_addr);
 
         /* config radio channels */
-        nrf24_setupFlags(radio->spiHardware, radio->cePort, radio->cePin, MASK_RX_DR_MASK);
-        nrf24_clearFlags(radio->spiHardware, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
-        nrf24_disableAutoAck(radio->spiHardware, radio->cePort, radio->cePin, 0xFF);
-        nrf24_setCrc(radio->spiHardware, radio->cePort, radio->cePin, CRC_OFF);
-        nrf24_setAddrWidth(radio->spiHardware, radio->cePort, radio->cePin, W_3BYTES);
-        nrf24_disableAutoRetransmit(radio->spiHardware, radio->cePort, radio->cePin);
+        nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, MASK_RX_DR_MASK);
+        nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
+        nrf24_disableAutoAck(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
+        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CRC_OFF);
+        nrf24_setAddrWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, W_3BYTES);
+        nrf24_disableAutoRetransmit(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
-        nrf24_setChannel(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_CH);
-        nrf24_setDataRate(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_DATARATE);
-        nrf24_setPowerLevel(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_POWER);
+        nrf24_setChannel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_CH);
+        nrf24_setDataRate(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_DATARATE);
+        nrf24_setPowerLevel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_POWER);
 
-        nrf24_setRxAddr(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, FRAME_ADDR_BASE | dmx_chunk_addr);
-        nrf24_enableRxAddr(radio->spiHardware, radio->cePort, radio->cePin, 1<<BROADCAST_RX_PIPE);
-        nrf24_setPayloadWidth(radio->spiHardware, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, BROADCAST_PL_WITDH);
+        nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, FRAME_ADDR_BASE | dmx_chunk_addr);
+        nrf24_enableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 1<<BROADCAST_RX_PIPE);
+        nrf24_setPayloadWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, BROADCAST_PL_WITDH);
 
         /* enable interrupt handling */
         NVIC_SetPriority(radio->irqN, 0);
@@ -321,7 +321,7 @@ void sgRF_init(sgRF_radio_t* radio){
                     debug.rx_count++;
                     #endif
                     
-                    nrf24_readRx(radio->spiHardware, radio->cePort, radio->cePin, (char*)radio->data, 4, BROADCAST_PL_WITDH);
+                    nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)radio->data, 4, BROADCAST_PL_WITDH);
 
                     radio->_rx_flag = false;
                     radio->_frame_flag = true;
@@ -378,7 +378,7 @@ void sgRF_init(sgRF_radio_t* radio){
 
         if(radio->_rt_flag) {
             // TODO handle rt interrupt
-            nrf24_clearFlags(radio->spiHardware, radio->cePort, radio->cePin, MAX_RT_MASK);
+            nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, MAX_RT_MASK);
         }
 
         if (radio->mode == FIXTURE) _sgRF_handleFixture(radio);

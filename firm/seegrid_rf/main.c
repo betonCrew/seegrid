@@ -36,7 +36,7 @@
 * DEALINGS IN THE SOFTWARE.
 *                                                                              
 *****************************************************************************/
-
+#define ioss_0_port_4_pin_8_ALT XMC_GPIO_MODE_OUTPUT_ALT7
 #include "cybsp.h"
 #include "cy_utils.h"
 #include "dmx.h"
@@ -77,17 +77,41 @@ volatile debug_t debug = {0,0,0,0};
     sgRF_radio_t radioA = {
         .usic = USIC1,
         .spiHardware = usic_1_ch_0_HW,
+        .spiSelo = 0,
         .irqN = IRQ3_IRQn,
-        .irqPort = RF_IRQ_PORT,
-        .irqPin = RF_IRQ_PIN,
-        .cePort = RF_CE_PORT,
-        .cePin = RF_CE_PIN,
+        .irqPort = RF_IRQ_A_PORT,
+        .irqPin = RF_IRQ_A_PIN,
+        .cePort = RF_CE_A_PORT,
+        .cePin = RF_CE_A_PIN,
         .mode = GATEWAY,
         .data = universe
     };
 
+    sgRF_radio_t radioB = {
+        .usic = USIC1,
+        .spiHardware = usic_1_ch_0_HW,
+        .spiSelo = 1,
+        .irqN = IRQ9_IRQn,
+        .irqPort = RF_IRQ_B_PORT,
+        .irqPin = RF_IRQ_B_PIN,
+        .cePort = RF_CE_B_PORT,
+        .cePin = RF_CE_B_PIN,
+        .mode = GATEWAY,
+        .data = universe
+    };
+
+    // const XMC_GPIO_CONFIG_t RF_CSN_B_config = 
+    // {
+    //     .mode = (XMC_GPIO_MODE_t)(XMC_GPIO_MODE_OUTPUT_PUSH_PULL | XMC_GPIO_MODE_OUTPUT_ALT7),
+    //     .output_level = XMC_GPIO_OUTPUT_LEVEL_LOW,
+    // };
+
     void IRQ3_Handler (void) {
         sgRF_radioIrqHandler(&radioA);
+    }
+
+    void IRQ9_Handler (void) {
+        sgRF_radioIrqHandler(&radioB);
     }
 
 int main(void)
@@ -101,10 +125,14 @@ int main(void)
         CY_ASSERT(0);
     }
 
+    // FIXME setup selo1 pin!
+    // XMC_GPIO_Init(RF_CSN_B_PORT, RF_CSN_B_PIN, &RF_CSN_B_config);
+
     SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
 
     dmx_handle(&dmx);
     sgRF_init(&radioA);
+    sgRF_init(&radioB);
     XMC_Delay(250);
 
     for (;;)
