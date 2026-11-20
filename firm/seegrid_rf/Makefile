@@ -106,7 +106,7 @@ VFP_SELECT=
 #
 # NOTE: Includes and defines should use the INCLUDES and DEFINES variable
 # above.
-CFLAGS=
+CFLAGS=-Wall -Wextra
 
 # Additional / custom C++ compiler flags.
 #

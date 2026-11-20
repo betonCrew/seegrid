@@ -73,8 +73,8 @@
     void nrf24_clearFlags(NRF24_PARAMS, const uint8_t flags);
 
     /**
-     * Set which flags shall be reflected on the IRQ pin
-     *      use: MASK_RX_DR_MASK, MASK_TX_DS_MASK, MASK_MAX_RT_MASK
+     * Set which flags shall be reflected on the IRQ pin, all others are masked
+     *      use: RX_DR_MASK, TX_DS_MASK, MAX_RT_MASK
      */
     void nrf24_setupFlags(NRF24_PARAMS, const uint8_t flags);
 

@@ -175,8 +175,9 @@ extern volatile debug_t debug;
     void nrf24_setupFlags(NRF24_PARAMS, const uint8_t flags) {
         char config = 0;
         _nrf24_readReg(spi, selo, NRF_CONFIG, &config, 1);
+        /* a set MASK_* bit hides the flag from the IRQ pin -> invert */
         config &= ~(MASK_RX_DR_MASK | MASK_MAX_RT_MASK | MASK_TX_DS_MASK);
-        config |= flags & (MASK_RX_DR_MASK | MASK_TX_DS_MASK | MASK_MAX_RT_MASK);
+        config |= ~flags & (MASK_RX_DR_MASK | MASK_TX_DS_MASK | MASK_MAX_RT_MASK);
         _nrf24_writeReg(spi, selo, NRF_CONFIG, &config, 1);
     }
 

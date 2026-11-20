@@ -204,25 +204,43 @@ void sgRF_init(sgRF_radio_t* radio){
         radio->_rt_flag = true;
     }
 
-    inline void sgRF_radioIrqHandler(sgRF_radio_t* radio) {
+    /**
+     * ISR: no SPI here, the bus may be busy with a main loop transaction.
+     * The flags are fetched and cleared in sgRF_handle.
+     */
+    void sgRF_radioIrqHandler(sgRF_radio_t* radio) {
+        radio->_irq_pending = true;
+    }
 
-        const uint8_t irq_flags = nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+    /**
+     * Read and clear the nRF status flags. The ERU triggers on the falling
+     * edge of the active-low IRQ pin, which only rises again once all flags
+     * are cleared, so repeat while the pin is still low (a flag set between
+     * read and clear would otherwise block every further interrupt).
+     */
+    static void _sgRF_serviceIrq(sgRF_radio_t* radio) {
+        if (!radio->_irq_pending) return;
+        radio->_irq_pending = false;
 
-        /* Data Ready RX FiFo */
-        if (irq_flags & RX_DR_MASK) {
-            _sgRF_radioIrqHandler_Rx(radio, (RX_P_NO_MASK&irq_flags)>>RX_P_NO_BIT);
-        }
+        do {
+            const uint8_t irq_flags = nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+            nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, irq_flags);
 
-        /* Data Sent TX FiFo */
-        if (irq_flags & TX_DS_MASK) {
-            _sgRF_radioIrqHandler_Tx(radio);
-        }
+            /* Data Ready RX FiFo */
+            if (irq_flags & RX_DR_MASK) {
+                _sgRF_radioIrqHandler_Rx(radio, (RX_P_NO_MASK&irq_flags)>>RX_P_NO_BIT);
+            }
 
-        /* Max Transmit Retries reached */
-        if (irq_flags & MAX_RT_MASK) {
-            _sgRF_radioIqrHandler_Rt(radio);
-        }
+            /* Data Sent TX FiFo */
+            if (irq_flags & TX_DS_MASK) {
+                _sgRF_radioIrqHandler_Tx(radio);
+            }
 
+            /* Max Transmit Retries reached */
+            if (irq_flags & MAX_RT_MASK) {
+                _sgRF_radioIqrHandler_Rt(radio);
+            }
+        } while (XMC_GPIO_GetInput(radio->irqPort, radio->irqPin) == 0);
     }
 
     static inline const uint8_t _sgRF_translateAddress(const _sgRF_dmx_addr_t dmx_addr) {
@@ -249,7 +267,7 @@ void sgRF_init(sgRF_radio_t* radio){
         const uint8_t dmx_chunk_addr = _sgRF_translateAddress(radio->_addr);
 
         /* config radio channels */
-        nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, MASK_RX_DR_MASK);
+        nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK);
         nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
         nrf24_disableAutoAck(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
         nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CRC_OFF);
@@ -374,11 +392,11 @@ void sgRF_init(sgRF_radio_t* radio){
 
     void sgRF_handle(sgRF_radio_t* radio) {
 
-        // FIXME irq could be forgetten to handle
+        _sgRF_serviceIrq(radio);
 
         if(radio->_rt_flag) {
-            // TODO handle rt interrupt
-            nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, MAX_RT_MASK);
+            // TODO handle rt interrupt (unreachable while auto retransmit is off)
+            radio->_rt_flag = false;
         }
 
         if (radio->mode == FIXTURE) _sgRF_handleFixture(radio);

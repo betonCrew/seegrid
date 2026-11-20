@@ -94,6 +94,7 @@
         _sgRF_state_t           _state;
         _sgRF_dmx_addr_t        _addr;
         _sgRF_dmx_width_t       _width;
+        volatile bool           _irq_pending;
         volatile bool           _tx_flag;
         volatile bool           _rx_flag;
         volatile uint8_t        _rx_pipe;

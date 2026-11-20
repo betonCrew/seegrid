@@ -55,57 +55,57 @@
 
     /* 0x00 CONFIG */
     #define MASK_RX_DR_BIT      6
-    #define MASK_RX_DR_MASK     0b1 << MASK_RX_DR_BIT
+    #define MASK_RX_DR_MASK     (0b1 << MASK_RX_DR_BIT)
     #define MASK_TX_DS_BIT      5
-    #define MASK_TX_DS_MASK      0b1 << MASK_TX_DS_BIT
+    #define MASK_TX_DS_MASK      (0b1 << MASK_TX_DS_BIT)
     #define MASK_MAX_RT_BIT     4
-    #define MASK_MAX_RT_MASK    0b1 << MASK_MAX_RT_BIT
+    #define MASK_MAX_RT_MASK    (0b1 << MASK_MAX_RT_BIT)
     #define EN_CRC_BIT          3
-    #define EN_CRC_MASK         0b1 << EN_CRC_BIT
+    #define EN_CRC_MASK         (0b1 << EN_CRC_BIT)
     #define CRCO_BIT            2
-    #define CRC0_MASK           0b1 << CRCO_BIT
+    #define CRC0_MASK           (0b1 << CRCO_BIT)
     #define PWR_UP_BIT          1
-    #define PWR_UP_MASK         0b1 << PWR_UP_BIT
+    #define PWR_UP_MASK         (0b1 << PWR_UP_BIT)
     #define PRIM_RX_BIT         0
-    #define PRIM_RX_MASK        0b1 << PRIM_RX_BIT
+    #define PRIM_RX_MASK        (0b1 << PRIM_RX_BIT)
 
     /* 0x01 EN_AA */
     #define ENAA_P5_BIT         5
-    #define ENAA_P5_MASK        0b1 << ENAA_P5_BIT
+    #define ENAA_P5_MASK        (0b1 << ENAA_P5_BIT)
     #define ENAA_P4_BIT         4
-    #define ENAA_P4_MASK        0b1 << ENAA_P4_BIT
+    #define ENAA_P4_MASK        (0b1 << ENAA_P4_BIT)
     #define ENAA_P3_BIT         3
-    #define ENAA_P3_MASK        0b1 << ENAA_P3_BIT
+    #define ENAA_P3_MASK        (0b1 << ENAA_P3_BIT)
     #define ENAA_P2_BIT         2
-    #define ENAA_P2_MASK        0b1 << ENAA_P2_BIT
+    #define ENAA_P2_MASK        (0b1 << ENAA_P2_BIT)
     #define ENAA_P1_BIT         1
-    #define ENAA_P1_MASK        0b1 << ENAA_P1_BIT
+    #define ENAA_P1_MASK        (0b1 << ENAA_P1_BIT)
     #define ENAA_P0_BIT         0
-    #define ENAA_P0_MASK        0b1 << ENAA_P0_BIT
+    #define ENAA_P0_MASK        (0b1 << ENAA_P0_BIT)
 
     /* 0x02 EN_RXADDR */
     #define ERX_P5_BIT          5
-    #define ERX_P5_MASK         0b1 << ERX_P5_BIT
+    #define ERX_P5_MASK         (0b1 << ERX_P5_BIT)
     #define ERX_P4_BIT          4
-    #define ERX_P4_MASK         0b1 << ERX_P4_BIT
+    #define ERX_P4_MASK         (0b1 << ERX_P4_BIT)
     #define ERX_P3_BIT          3
-    #define ERX_P3_MASK         0b1 << ERX_P3_BIT
+    #define ERX_P3_MASK         (0b1 << ERX_P3_BIT)
     #define ERX_P2_BIT          2
-    #define ERX_P2_MASK         0b1 << ERX_P2_BIT
+    #define ERX_P2_MASK         (0b1 << ERX_P2_BIT)
     #define ERX_P1_BIT          1
-    #define ERX_P1_MASK         0b1 << ERX_P1_BIT
+    #define ERX_P1_MASK         (0b1 << ERX_P1_BIT)
     #define ERX_P0_BIT          0
-    #define ERX_PO_MASK         0b1 << ERX_P0_BIT
+    #define ERX_PO_MASK         (0b1 << ERX_P0_BIT)
 
     /* 0x03 SETUP_AW */
     #define AW_BIT              0
-    #define AW_MASK             0b11 << AW_BIT
+    #define AW_MASK             (0b11 << AW_BIT)
 
     /* 0x04 SETUP_RETR */
     #define ARD_BIT             4
-    #define ARD_MASK            0b1111 << ARD_BIT
+    #define ARD_MASK            (0b1111 << ARD_BIT)
     #define ARC_BIT             0
-    #define ARC_MASK            0b1111 << ARC_BIT
+    #define ARC_MASK            (0b1111 << ARC_BIT)
 
     /* 0x05 RF_CH */
     #define CH_BIT              0
@@ -113,37 +113,37 @@
 
     /* 0x06 RF_SETUP */
     #define RF_PWR_BIT          1
-    #define RF_PWR_MASK         0b11 << RF_PWR_BIT
+    #define RF_PWR_MASK         (0b11 << RF_PWR_BIT)
     #define RF_DR_H_BIT         3
-    #define RF_DR_H_MASK        0b1 << RF_DR_H_BIT
+    #define RF_DR_H_MASK        (0b1 << RF_DR_H_BIT)
     #define PLL_LOCK_BIT        4
-    #define PLL_LOCK_MASK       0b1 << PLL_LOCK_BIT
+    #define PLL_LOCK_MASK       (0b1 << PLL_LOCK_BIT)
     #define RF_DR_L_BIT         5
-    #define RF_DR_L_MASK        0b1 << RF_DR_L_BIT
+    #define RF_DR_L_MASK        (0b1 << RF_DR_L_BIT)
     #define CONT_WAVE_BIT       7
-    #define CONT_WAVE_MASK      0b1 << CONT_WAVE_BIT
+    #define CONT_WAVE_MASK      (0b1 << CONT_WAVE_BIT)
 
     /* 0x07 STATUS */
     #define RX_DR_BIT           6
-    #define RX_DR_MASK          0b1 << RX_DR_BIT
+    #define RX_DR_MASK          (0b1 << RX_DR_BIT)
     #define TX_DS_BIT           5
-    #define TX_DS_MASK          0b1 << TX_DS_BIT
+    #define TX_DS_MASK          (0b1 << TX_DS_BIT)
     #define MAX_RT_BIT          4
-    #define MAX_RT_MASK         0b1 << MAX_RT_BIT
+    #define MAX_RT_MASK         (0b1 << MAX_RT_BIT)
     #define RX_P_NO_BIT         1
-    #define RX_P_NO_MASK        0b111 << RX_P_NO_BIT
+    #define RX_P_NO_MASK        (0b111 << RX_P_NO_BIT)
     #define TX_FIFO_FULL_BIT    0
-    #define TX_FIFO_FULL_MASK   0b1 << TX_FIFO_FULL_BIT
+    #define TX_FIFO_FULL_MASK   (0b1 << TX_FIFO_FULL_BIT)
 
     /* 0x08 OBSERVE_TX */
     #define PLOS_CNT_BIT        4
-    #define PLOS_CNT_MASK       0b1111 << PLOS_CNT_BIT
+    #define PLOS_CNT_MASK       (0b1111 << PLOS_CNT_BIT)
     #define ARC_CNT_BIT         0
-    #define ARC_CNT_MASK        0b1111 << ARC_CNT_BIT
+    #define ARC_CNT_MASK        (0b1111 << ARC_CNT_BIT)
 
     /* 0x09 RPD */
     #define RPD_BIT             0
-    #define RPD_MASK            0b1 << RPD_BIT
+    #define RPD_MASK            (0b1 << RPD_BIT)
 
     /* 0x0A RX_ADDR_P0 */
     /* 0x0B RX_ADDR_P1 */
@@ -164,37 +164,37 @@
 
     /* 0x17 FIFO_STATUS */
     #define TX_REUSE_BIT        6
-    #define TX_REUSE_MASK       0b1 << TX_REUSE_BIT
+    #define TX_REUSE_MASK       (0b1 << TX_REUSE_BIT)
     #define TX_FULL_BIT         5
-    #define TX_FULL_MASK        0b1 << TX_FULL_BIT
+    #define TX_FULL_MASK        (0b1 << TX_FULL_BIT)
     #define TX_EMPTY_BIT        4
-    #define TX_EMPTY_MASK       0b1 << TX_EMPTY_BIT
+    #define TX_EMPTY_MASK       (0b1 << TX_EMPTY_BIT)
     #define RX_FULL_BIT         1
-    #define RX_FULL_MASK        0b1 << RX_FULL_BIT
+    #define RX_FULL_MASK        (0b1 << RX_FULL_BIT)
     #define RX_EMPTY_BIT        0
-    #define RX_EMPTY_MASK       0b1 << RX_EMPTY_BIT
+    #define RX_EMPTY_MASK       (0b1 << RX_EMPTY_BIT)
 
     /* 0x1C DYNPD */
     #define DPL_P5_BIT          5
-    #define DPL_P5_MASK         0b1 << DPL_P5_BIT
+    #define DPL_P5_MASK         (0b1 << DPL_P5_BIT)
     #define DPL_P4_BIT          4
-    #define DPL_P4_MASK         0b1 << DPL_P4_BIT
+    #define DPL_P4_MASK         (0b1 << DPL_P4_BIT)
     #define DPL_P3_BIT          3
-    #define DPL_P3_MASK         0b1 << DPL_P3_BIT
+    #define DPL_P3_MASK         (0b1 << DPL_P3_BIT)
     #define DPL_P2_BIT          2
-    #define DPL_P2_MASK         0b1 << DPL_P2_BIT
+    #define DPL_P2_MASK         (0b1 << DPL_P2_BIT)
     #define DPL_P1_BIT          1
-    #define DPL_P1_MASK         0b1 << DPL_P1_BIT
+    #define DPL_P1_MASK         (0b1 << DPL_P1_BIT)
     #define DPL_P0_BIT          0
-    #define DPL_P0_MASK         0b1 << DPL_P0_BIT
+    #define DPL_P0_MASK         (0b1 << DPL_P0_BIT)
 
     /* 0x1D FEATURE */
     #define EN_DPL_BIT          2
-    #define EN_DPL_MASK         0b1 << EN_DPL_BIT
+    #define EN_DPL_MASK         (0b1 << EN_DPL_BIT)
     #define EN_ACK_PAY_BIT      1
-    #define EN_ACK_PAY_MASK     0b1 << EN_ACK_PAY_BIT
+    #define EN_ACK_PAY_MASK     (0b1 << EN_ACK_PAY_BIT)
     #define EN_DYN_ACK_BIT      0
-    #define EN_DYN_ACK_MASK     0b1 << EN_DYN_ACK_BIT
+    #define EN_DYN_ACK_MASK     (0b1 << EN_DYN_ACK_BIT)
 
     /* SPI COMMANDS */
     #define R_REGISTER          0x00
