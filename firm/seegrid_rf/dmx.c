@@ -75,6 +75,8 @@ static void test_colorwheel(dmx_buf_t buf) {
 #define ENTTEC_SOM              0x7E
 #define ENTTEC_EOM              0xE7
 #define ENTTEC_LABEL_SEND_DMX   6
+#define ENTTEC_LABEL_SEND_RDM   7
+#define ENTTEC_LABEL_RDM_DISC   11
 #define ENTTEC_MAX_LEN          600
 
 static void enttec_rx(dmx_t* dmx, const uint8_t byte) {
@@ -99,17 +101,28 @@ static void enttec_rx(dmx_t* dmx, const uint8_t byte) {
                 break;
             }
             dmx->_rx_keep = (dmx->_rx_label == ENTTEC_LABEL_SEND_DMX);
+            /* the host waits for each RDM reply, so a pending request means a protocol error */
+            dmx->_rdm_keep = (dmx->_rx_label == ENTTEC_LABEL_SEND_RDM || dmx->_rx_label == ENTTEC_LABEL_RDM_DISC)
+                             && !dmx->_rdm_ready && dmx->_rx_len <= DMX_RDM_MAX;
             dmx->_rx_state = dmx->_rx_len ? _DMX_RX_DATA : _DMX_RX_EOM;
             break;
         case _DMX_RX_DATA:
             if (dmx->_rx_keep && dmx->_rx_pos < sizeof(dmx->_rx_data[0])) {
                 dmx->_rx_data[dmx->_rx_fill][dmx->_rx_pos] = byte;
             }
+            if (dmx->_rdm_keep) {
+                dmx->_rdm_data[dmx->_rx_pos] = byte;
+            }
             if (++dmx->_rx_pos >= dmx->_rx_len) dmx->_rx_state = _DMX_RX_EOM;
             break;
         case _DMX_RX_EOM:
             if (byte != ENTTEC_EOM) {
                 dmx->errors++;
+            }
+            else if (dmx->_rdm_keep) {
+                dmx->_rdm_len = dmx->_rx_len;
+                dmx->_rdm_discovery = (dmx->_rx_label == ENTTEC_LABEL_RDM_DISC);
+                dmx->_rdm_ready = true;
             }
             else if (dmx->_rx_keep && dmx->_rx_data[dmx->_rx_fill][0] == 0x00) {
                 /* start code 0 = dimmer data; others (RDM, text, ...) are ignored.
@@ -167,6 +180,25 @@ static void enttec_rx(dmx_t* dmx, const uint8_t byte) {
         dmx->_new_frame = true;
     }
     #endif
+
+    bool dmx_rdmRequest(dmx_t* dmx, const uint8_t** data, uint16_t* len, bool* discovery) {
+        if (!dmx->_rdm_ready) return false;
+        *data = dmx->_rdm_data;
+        *len = dmx->_rdm_len;
+        *discovery = dmx->_rdm_discovery;
+        return true;
+    }
+
+    void dmx_rdmDone(dmx_t* dmx) {
+        dmx->_rdm_ready = false;
+    }
+
+    void dmx_send(dmx_t* dmx, const uint8_t label, const uint8_t* data, const uint16_t len) {
+        const uint8_t head[4] = { ENTTEC_SOM, label, (uint8_t)len, (uint8_t)(len >> 8) };
+        for (uint8_t i = 0; i < sizeof(head); i++) XMC_UART_CH_Transmit(dmx->usic_ch, head[i]);
+        for (uint16_t i = 0; i < len; i++) XMC_UART_CH_Transmit(dmx->usic_ch, data[i]);
+        XMC_UART_CH_Transmit(dmx->usic_ch, ENTTEC_EOM);
+    }
 
     void dmx_rxIrqHandler(dmx_t* dmx) {
         while (!XMC_USIC_CH_RXFIFO_IsEmpty(dmx->usic_ch)) {

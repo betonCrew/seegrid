@@ -42,6 +42,7 @@
 #include "dmx.h"
 #include "seeGridRF.h"
 #include "fixtures.h"
+#include "rdm.h"
 
 
 #ifdef DEBUG
@@ -67,8 +68,9 @@ volatile debug_t debug = {0,0,0,0};
  */
     uint8_t universe[512];
 
-    /* config packets sent after each DMX frame */
+    /* config packets sent after each DMX frame, or on their own without DMX */
     #define CONFIGS_PER_FRAME   4
+    #define CONFIG_IDLE_MS      33
     
 /**
  * Hardware Declarations
@@ -151,17 +153,22 @@ int main(void)
     {
         dmx_handle(&dmx);
 
-        if (dmx_newFrame(&dmx) && sgRF_readyToBroadcast(&radioA)) {
-            sgRF_enableBroadcastTransmitter(&radioA);
-            sgRF_broadcastDmxFrame(&radioA, universe);
-            /* config changes ride in the gap after the frame */
-            for (uint8_t i = 0; i < CONFIGS_PER_FRAME; i++) {
-                const sgRF_config_t* cfg = fixtures_nextConfig();
-                if (cfg == NULL) break;
-                sgRF_broadcastConfig(&radioA, cfg);
+        static uint32_t last_tx_ms;
+        const bool frame = dmx_newFrame(&dmx);
+        if ((frame || msTicks - last_tx_ms >= CONFIG_IDLE_MS) && sgRF_readyToBroadcast(&radioA)) {
+            const sgRF_config_t* cfg = fixtures_nextConfig();
+            if (frame || cfg != NULL) {
+                sgRF_enableBroadcastTransmitter(&radioA);
+                if (frame) sgRF_broadcastDmxFrame(&radioA, universe);
+                /* config changes ride in the gap after the frame */
+                for (uint8_t i = 0; i < CONFIGS_PER_FRAME && cfg != NULL; i++) {
+                    sgRF_broadcastConfig(&radioA, cfg);
+                    if (i + 1 < CONFIGS_PER_FRAME) cfg = fixtures_nextConfig();
+                }
+                sgRF_disableBroadcastTransmitter(&radioA);
+                last_tx_ms = msTicks;
             }
-            sgRF_disableBroadcastTransmitter(&radioA);
-            dmx_clearFrame(&dmx);
+            if (frame) dmx_clearFrame(&dmx);
         }
 
         sgRF_handle(&radioA);
@@ -169,6 +176,14 @@ int main(void)
         sgRF_heartbeat_t hb;
         while (sgRF_readHeartbeat(&radioB, &hb)) {
             fixtures_heartbeat(&hb, msTicks);
+        }
+
+        const uint8_t* rdm_req;
+        uint16_t rdm_len;
+        bool rdm_disc;
+        if (dmx_rdmRequest(&dmx, &rdm_req, &rdm_len, &rdm_disc)) {
+            rdm_handle(&dmx, rdm_req, rdm_len, rdm_disc, msTicks);
+            dmx_rdmDone(&dmx);
         }
 
         #ifdef DEBUG
