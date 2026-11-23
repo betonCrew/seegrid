@@ -45,9 +45,36 @@
     #define BROADCAST_PL_WITDH  32
     #define BROADCAST_CRC       CRC_2B
 
-    #define CONTROL_CH          64
-    #define CONTROL_DATARATE    R_250kbps
+    /* 2480 MHz, inside the ISM band and outside the busy WiFi channels here.
+       2 Mbps: the module's carrier sits ~0.5-1 MHz off the gateway's (far
+       beyond the +-60 ppm crystal spec); 250 kbps got nothing through, 1 Mbps
+       24-80 %, 2 Mbps (twice the deviation) all of it */
+    #define CONTROL_CH          80
+    #define CONTROL_DATARATE    R_2Mbps
     #define CONTROL_POWER       P_0dBM
+
+    /**
+     * Control packets, 16 bytes, CRC 2 bytes, no ACK:
+     *  - heartbeat: fixture -> gateway on CONTROL_CH (gateway radio B, pipe 0)
+     *  - config:    gateway -> fixture on BROADCAST_CH after the DMX frame
+     *               (fixture pipe 1, next to the DMX chunk on pipe 0)
+     * Addresses avoid preamble-like runs and differ from the chunk addresses.
+     */
+    #define CONTROL_PL_WIDTH    16
+    #define HEARTBEAT_ADDR      0x13C6B4UL
+    #define CONFIG_ADDR         0x0E9C4BUL
+    #define CONFIG_RX_PIPE      1
+
+    #define SGRF_PKT_HEARTBEAT  0x01
+    #define SGRF_PKT_CONFIG     0x02
+
+    /* heartbeat flags */
+    #define SGRF_HB_IDENTIFY    0x01    /* identify (blinking) active */
+    #define SGRF_HB_NO_SIGNAL   0x02    /* no DMX frame for SIGNAL_TIMEOUT */
+
+    /* config fields meaning "leave as is" */
+    #define SGRF_CFG_KEEP_ADDR      0x0000
+    #define SGRF_CFG_KEEP_IDENTIFY  0xFF
 
 
 /**
@@ -72,13 +99,39 @@
 
     typedef enum {
     OFF, STBY,
-    GW_TRANS, GW_BROADCAST,
+    GW_TRANS, GW_BROADCAST, GW_STATUS,
     FIX_BROADCAST, FIX_CONTROL
             } _sgRF_state_t;
 
     typedef enum {FIXTURE, GATEWAY} sgRF_mode_t;
 
-    typedef uint8_t _sgRF_dmx_addr_t;
+    /* DMX channel offset 0..511 (start address - 1) */
+    typedef uint16_t _sgRF_dmx_addr_t;
+
+    typedef struct __attribute__((packed)) {
+        uint8_t     type;           /* SGRF_PKT_HEARTBEAT */
+        uint8_t     seq;
+        uint32_t    id;             /* fixture id (CRC32 of the chip UCID) */
+        uint16_t    dmx_addr;       /* DMX start address 1..512 */
+        uint8_t     personality;
+        uint8_t     flags;          /* SGRF_HB_* */
+        uint16_t    battery_mv;
+        uint8_t     rx_fps;         /* DMX frames received during the last second */
+        uint8_t     fw_version;
+        uint8_t     reserved[2];
+    } sgRF_heartbeat_t;
+
+    typedef struct __attribute__((packed)) {
+        uint8_t     type;           /* SGRF_PKT_CONFIG */
+        uint8_t     seq;
+        uint32_t    id;             /* target fixture */
+        uint16_t    dmx_addr;       /* new start address, SGRF_CFG_KEEP_ADDR = keep */
+        uint8_t     identify;       /* 0 off, 1 on, SGRF_CFG_KEEP_IDENTIFY = keep */
+        uint8_t     reserved[7];
+    } sgRF_config_t;
+
+    _Static_assert(sizeof(sgRF_heartbeat_t) == CONTROL_PL_WIDTH, "heartbeat size");
+    _Static_assert(sizeof(sgRF_config_t) == CONTROL_PL_WIDTH, "config size");
 
     typedef uint8_t _sgRF_dmx_width_t;
 
@@ -102,6 +155,8 @@
         volatile uint8_t        _rx_pipe;
         volatile bool           _rt_flag;
         bool                    _frame_flag;
+        bool                    _config_flag;
+        sgRF_config_t           _config;
     } sgRF_radio_t;
 
 
@@ -146,12 +201,45 @@
          */
         void sgRF_broadcastDmxFrame(const sgRF_radio_t* radio, const uint8_t* frame);
 
+        /**
+         * Broadcast a config packet (after the DMX frame, broadcast transmitter active)
+         */
+        void sgRF_broadcastConfig(const sgRF_radio_t* radio, const sgRF_config_t* config);
+
+    /* Status receiving (gateway) */
+
+        /**
+         * listen for fixture heartbeats on the control channel
+         */
+        void sgRF_enableStatusReceiver(sgRF_radio_t* radio);
+
+        /**
+         * fetch the next received heartbeat; false if there is none
+         */
+        bool sgRF_readHeartbeat(sgRF_radio_t* radio, sgRF_heartbeat_t* heartbeat);
+
     /* DMX Receiving */
     
         /**
-         * this will turn on receiving mode
+         * this will turn on receiving mode (DMX chunk of the DMX address + config packets)
          */
         void sgRF_enableBroadcastReceiver(sgRF_radio_t* radio);
+
+        /**
+         * set the DMX channel offset (start address - 1) the fixture listens to
+         */
+        void sgRF_setDmxAddress(sgRF_radio_t* radio, const _sgRF_dmx_addr_t offset);
+
+        /**
+         * send a heartbeat on the control channel (~1 ms, DMX reception paused)
+         */
+        void sgRF_sendHeartbeat(sgRF_radio_t* radio, const sgRF_heartbeat_t* heartbeat);
+
+        /**
+         * check for / fetch a received config packet
+         */
+        bool sgRF_receivedConfig(const sgRF_radio_t* radio);
+        sgRF_config_t sgRF_readConfig(sgRF_radio_t* radio);
 
         /**
          * this will turn of receiving mode

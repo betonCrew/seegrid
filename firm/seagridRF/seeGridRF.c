@@ -21,29 +21,6 @@ extern volatile debug_t debug;
  */
 
     /**
-     * Payload Configuration
-     * 
-     *  defines how much bytes of payload are needed for the fixture
-     *  and how many channels are encoded within it
-     */
-    typedef uint8_t _sgRF_payloadConf_t;
-    /* 5bits payload size -> 0..31Byte */
-    #define PAYLOAD_CONF_SIZE
-    #define PAYLOAD_CONF_SIZE_BIT   0
-    #define PAYLOAD_CONF_SIZE_MSK   0b11111
-    /* 3bits channel count -> 0..7 channels */
-    #define PAYLOAD_CONF_CH
-    #define PAYLOAD_CONF_CH_BIT     5
-    #define PAYLOAD_CONF_CH_MSK     0b111
-
-    typedef struct{
-        uint32_t ucid[4];
-        uint8_t batLvl;
-        _sgRF_payloadConf_t paylodConf;
-        /* last 2 byte reserved */
-    } _sgRF_fixtureIdentifier_t;
-
-    /**
      *  LSByte of the packet address per 32 byte chunk: the 16 codewords of
      *  the extended Hamming code [8,4,4] XOR 0x08. Every two chunk addresses
      *  differ in >= 4 bits, no byte has a run longer than 4 bits, and with
@@ -194,6 +171,55 @@ bool sgRF_init(sgRF_radio_t* radio){
         }
     }
 
+    void sgRF_broadcastConfig(const sgRF_radio_t* radio, const sgRF_config_t* config) {
+        if (radio->_state != GW_BROADCAST) return;
+        _sgRF_waitTxDone(radio);
+        nrf24_setTxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONFIG_ADDR);
+        nrf24_writeTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (const char*)config, CONTROL_PL_WIDTH);
+        XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
+        XMC_DelayUs(15);
+        XMC_GPIO_SetOutputLow(radio->cePort, radio->cePin);
+    }
+
+/**
+ * Status Receiving (gateway)
+ */
+
+    void sgRF_enableStatusReceiver(sgRF_radio_t* radio) {
+        if(!_sgRF_setState(radio, GW_STATUS)) return;
+
+        nrf24_setupFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK);
+        nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, RX_DR_MASK|TX_DS_MASK|MAX_RT_MASK);
+        nrf24_disableAutoAck(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
+        nrf24_setCrc(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_CRC);
+        nrf24_setAddrWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, W_3BYTES);
+        nrf24_disableAutoRetransmit(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+        nrf24_setChannel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONTROL_CH);
+        nrf24_setDataRate(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONTROL_DATARATE);
+        nrf24_setPowerLevel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONTROL_POWER);
+        nrf24_disableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0xFF);
+        nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0, HEARTBEAT_ADDR);
+        nrf24_enableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 1<<0);
+        nrf24_setPayloadWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 0, CONTROL_PL_WIDTH);
+        nrf24_flushRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+        nrf24_setPrimRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+
+        NVIC_SetPriority(radio->irqN, 0);
+        NVIC_ClearPendingIRQ(radio->irqN);
+        NVIC_EnableIRQ(radio->irqN);
+        XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
+    }
+
+    bool sgRF_readHeartbeat(sgRF_radio_t* radio, sgRF_heartbeat_t* heartbeat) {
+        if (radio->_state != GW_STATUS || !radio->_rx_flag) return false;
+        if (nrf24_rxFifoEmpty(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin)) {
+            radio->_rx_flag = false;
+            return false;
+        }
+        nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)heartbeat, 1, CONTROL_PL_WIDTH);
+        return heartbeat->type == SGRF_PKT_HEARTBEAT;
+    }
+
 /**
  * DMX Receiving
  * 
@@ -279,8 +305,7 @@ bool sgRF_init(sgRF_radio_t* radio){
         /* check if initialized / set state */
         if(!_sgRF_setState(radio, FIX_BROADCAST)) return;
 
-        // TODO where to get the dmx address??
-        radio->_addr = 0x00;
+        /* radio->_addr: set by the application before (sgRF_setDmxAddress) */
         radio->_width = FIXTURE_CH_CNT;
         const uint32_t dmx_chunk_addr = _sgRF_translateAddress(radio->_addr);
 
@@ -297,8 +322,10 @@ bool sgRF_init(sgRF_radio_t* radio){
         nrf24_setPowerLevel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_POWER);
 
         nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, dmx_chunk_addr);
-        nrf24_enableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 1<<BROADCAST_RX_PIPE);
+        nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONFIG_RX_PIPE, CONFIG_ADDR);
+        nrf24_enableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (1<<BROADCAST_RX_PIPE) | (1<<CONFIG_RX_PIPE));
         nrf24_setPayloadWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, BROADCAST_PL_WITDH);
+        nrf24_setPayloadWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONFIG_RX_PIPE, CONTROL_PL_WIDTH);
         /* after nrf24_reset the radio is PTX: with CE high it would never listen */
         nrf24_setPrimRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
@@ -321,6 +348,52 @@ bool sgRF_init(sgRF_radio_t* radio){
         XMC_GPIO_SetOutputLow(radio->cePort, radio->cePin);
         NVIC_DisableIRQ(radio->irqN);
         _sgRF_resetState(radio);
+    }
+
+    void sgRF_setDmxAddress(sgRF_radio_t* radio, const _sgRF_dmx_addr_t offset) {
+        radio->_addr = offset;
+        if (radio->_state != FIX_BROADCAST) return;
+        XMC_GPIO_SetOutputLow(radio->cePort, radio->cePin);
+        nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, _sgRF_translateAddress(offset));
+        XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
+    }
+
+    void sgRF_sendHeartbeat(sgRF_radio_t* radio, const sgRF_heartbeat_t* heartbeat) {
+        if (radio->_state != FIX_BROADCAST) return;
+
+        XMC_GPIO_SetOutputLow(radio->cePort, radio->cePin);
+        nrf24_setPrimTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+        nrf24_setChannel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONTROL_CH);
+        nrf24_setDataRate(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, CONTROL_DATARATE);
+        nrf24_setTxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, HEARTBEAT_ADDR);
+        nrf24_flushTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+        nrf24_writeTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (const char*)heartbeat, CONTROL_PL_WIDTH);
+        XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
+        XMC_DelayUs(15);
+        XMC_GPIO_SetOutputLow(radio->cePort, radio->cePin);
+        /* the TX FIFO already reads empty while the packet is still on air:
+           wait for TX_DS (sent) before leaving TX mode. 130 us settling +
+           ~0.2 ms (1 Mbps) / ~0.7 ms (250 kbps) on air; bounded to 2 ms */
+        for (uint8_t i = 0; i < 40; i++) {
+            if (nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin) & TX_DS_MASK) break;
+            XMC_DelayUs(50);
+        }
+        nrf24_flushTx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+        nrf24_clearFlags(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, TX_DS_MASK|MAX_RT_MASK);
+
+        nrf24_setDataRate(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_DATARATE);
+        nrf24_setChannel(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_CH);
+        nrf24_setPrimRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+        XMC_GPIO_SetOutputHigh(radio->cePort, radio->cePin);
+    }
+
+    bool sgRF_receivedConfig(const sgRF_radio_t* radio) {
+        return radio->_config_flag;
+    }
+
+    sgRF_config_t sgRF_readConfig(sgRF_radio_t* radio) {
+        radio->_config_flag = false;
+        return radio->_config;
     }
 
     bool sgRF_receivedFrame(const sgRF_radio_t* radio) {
@@ -382,16 +455,27 @@ bool sgRF_init(sgRF_radio_t* radio){
              */
             case FIX_BROADCAST:
                 /* check for packet */
-                if(radio->_rx_flag && (radio->_rx_pipe==BROADCAST_RX_PIPE)) {
-                    
-                    #ifdef DEBUG
-                    debug.rx_count++;
-                    #endif
-                    
-                    nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)radio->data, 1, BROADCAST_PL_WITDH);
-
+                if (radio->_rx_flag) {
                     radio->_rx_flag = false;
-                    radio->_frame_flag = true;
+                    /* the FIFO may hold DMX chunks (pipe 0) and config packets (pipe 1):
+                       RX_P_NO in the status names the pipe of the oldest entry */
+                    for (uint8_t n = 0; n < 3 && !nrf24_rxFifoEmpty(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin); n++) {
+                        const uint8_t pipe = (nrf24_readStatus(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin) & RX_P_NO_MASK) >> RX_P_NO_BIT;
+                        if (pipe == BROADCAST_RX_PIPE) {
+                            #ifdef DEBUG
+                            debug.rx_count++;
+                            #endif
+                            nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)radio->data, 1, BROADCAST_PL_WITDH);
+                            radio->_frame_flag = true;
+                        }
+                        else if (pipe == CONFIG_RX_PIPE) {
+                            nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)&radio->_config, 1, CONTROL_PL_WIDTH);
+                            radio->_config_flag = (radio->_config.type == SGRF_PKT_CONFIG);
+                        }
+                        else {
+                            nrf24_flushRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
+                        }
+                    }
                 }
                 // TODO how long do we wait in this mode for a packet? should there be some kind of timeout?
                 break;
