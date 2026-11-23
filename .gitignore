@@ -3,6 +3,5 @@ elec/seegridProto/seegridProto-backups/*
 elec/seegridProto/seegridProto-backups/*
 finance
 *build
-*bsps*
-*deps*
+firm/mtb_shared/
 seaGrid_finance.zip
