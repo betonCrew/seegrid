@@ -1,0 +1,13 @@
+[package]
+name = "seegrid-bridge"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.6.9", features = ["derive"] }
+eframe = "0.34"
+egui_ratatui = "2.2"
+ratatui = "0.30"
+serialport = "4.10.1"
+socket2 = "0.6.5"
+soft_ratatui = "0.2"
