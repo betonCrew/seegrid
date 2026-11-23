@@ -334,10 +334,39 @@ bool sgRF_init(sgRF_radio_t* radio){
         return radio->_frame_flag;
     }
 
+    /* DMX convention: multi-byte channels are sent coarse (high byte) first */
+    static sgRF_fixCh_t _sgRF_getCh(const uint8_t* src) {
+        sgRF_fixCh_t val = 0;
+        for (uint8_t i = 0; i < FIXTURE_CH_BYTES; i++) {
+            val = (sgRF_fixCh_t)((val << 8) | src[i]);
+        }
+        return val;
+    }
+
+    static void _sgRF_putCh(uint8_t* dst, sgRF_fixCh_t val) {
+        for (uint8_t i = FIXTURE_CH_BYTES; i > 0; i--) {
+            dst[i - 1] = (uint8_t)val;
+            val = (sgRF_fixCh_t)(val >> 8);
+        }
+    }
+
     const sgRF_fixFrame_t sgRF_readFrame(sgRF_radio_t* radio) {
-        uint8_t* data_ptr = radio->data + (radio->_addr % 32);
+        const uint8_t* src = radio->data + (radio->_addr % 32);
         radio->_frame_flag = false;
-        return *((sgRF_fixFrame_t*)data_ptr);
+        sgRF_fixFrame_t frame = {
+            .white = _sgRF_getCh(src + 0 * FIXTURE_CH_BYTES),
+            .red   = _sgRF_getCh(src + 1 * FIXTURE_CH_BYTES),
+            .blue  = _sgRF_getCh(src + 2 * FIXTURE_CH_BYTES),
+            .green = _sgRF_getCh(src + 3 * FIXTURE_CH_BYTES),
+        };
+        return frame;
+    }
+
+    void sgRF_writeFrame(uint8_t* dst, const sgRF_fixFrame_t* frame) {
+        _sgRF_putCh(dst + 0 * FIXTURE_CH_BYTES, frame->white);
+        _sgRF_putCh(dst + 1 * FIXTURE_CH_BYTES, frame->red);
+        _sgRF_putCh(dst + 2 * FIXTURE_CH_BYTES, frame->blue);
+        _sgRF_putCh(dst + 3 * FIXTURE_CH_BYTES, frame->green);
     }
 
     static void _sgRF_handleFixture(sgRF_radio_t* radio){

@@ -16,7 +16,8 @@
  */
 
     #define FIXTURE_CH_CNT      4
-    #define FIXTURE_CH_BYTES    1
+    #define FIXTURE_CH_BYTES    1   /* 2: 16 bit channels, high byte first (DMX coarse/fine) */
+    #define FIXTURE_FRAME_BYTES (FIXTURE_CH_CNT * FIXTURE_CH_BYTES)
 
     #define ADDR_WIDTH          3
     #define AUTO_RETRANS        0
@@ -165,6 +166,11 @@
          * return last frame from radio buffer
          */
         const sgRF_fixFrame_t sgRF_readFrame(sgRF_radio_t* radio);
+
+        /**
+         * encode a fixture frame into its DMX byte layout (FIXTURE_FRAME_BYTES at dst)
+         */
+        void sgRF_writeFrame(uint8_t* dst, const sgRF_fixFrame_t* frame);
 
 
 #endif
