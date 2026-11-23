@@ -183,6 +183,46 @@ volatile debug_t debug = {0,0,0,0};
         led_setWhite(&led, dmx_to_pwm(frame->white));
     }
 
+    /**
+     * Signal loss: hold the last frame, then fade it out
+     */
+    #define SIGNAL_TIMEOUT_MS   2000
+    #define SIGNAL_FADE_MS      1000
+
+    static sgRF_fixFrame_t last_frame;
+    static uint32_t last_frame_ms;
+    static bool faded_out = true;   /* nothing received yet: LED is dark */
+
+    static void frame_received(const sgRF_fixFrame_t* frame) {
+        last_frame = *frame;
+        last_frame_ms = msTicks;
+        faded_out = false;
+        show_frame(frame);
+    }
+
+    static sgRF_fixCh_t fade_ch(const sgRF_fixCh_t val, const uint32_t remaining) {
+        return (sgRF_fixCh_t)((uint32_t)val * remaining / SIGNAL_FADE_MS);
+    }
+
+    static void handle_signal_loss(void) {
+        static uint32_t last_update_ms;
+        const uint32_t now = msTicks;
+        const uint32_t since = now - last_frame_ms;
+        if (faded_out || since <= SIGNAL_TIMEOUT_MS || now == last_update_ms) return;
+        last_update_ms = now;
+
+        const uint32_t fading = since - SIGNAL_TIMEOUT_MS;
+        const uint32_t remaining = (fading < SIGNAL_FADE_MS) ? SIGNAL_FADE_MS - fading : 0;
+        const sgRF_fixFrame_t dimmed = {
+            .white = fade_ch(last_frame.white, remaining),
+            .red   = fade_ch(last_frame.red,   remaining),
+            .blue  = fade_ch(last_frame.blue,  remaining),
+            .green = fade_ch(last_frame.green, remaining),
+        };
+        show_frame(&dimmed);
+        faded_out = (remaining == 0);
+    }
+
 
 
 
@@ -225,8 +265,9 @@ volatile debug_t debug = {0,0,0,0};
 
             if (sgRF_receivedFrame(&radio)) {
                 const sgRF_fixFrame_t frame = sgRF_readFrame(&radio);
-                show_frame(&frame);
+                frame_received(&frame);
             }
+            handle_signal_loss();
         }
     }
 
