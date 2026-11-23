@@ -79,7 +79,8 @@ ENTRY(Reset_Handler)
 
 MEMORY
 {
-    FLASH(RX) : ORIGIN = 0x10001000, LENGTH = 0x8000
+    /* the last page (0x10008F00, 256 bytes) holds the fixture configuration (config.c) */
+    FLASH(RX) : ORIGIN = 0x10001000, LENGTH = 0x7F00
     SRAM(!RX) : ORIGIN = 0x20000000, LENGTH = 0x4000
 }
 

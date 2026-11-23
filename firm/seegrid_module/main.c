@@ -44,6 +44,7 @@
 #include "stdbool.h"
 
 #include "battery.h"
+#include "config.h"
 #include "boostConverter.h"
 #include "ledLib.h"
 #include "../seagridRF/seeGridRF.h"
@@ -141,7 +142,8 @@ volatile debug_t debug = {0,0,0,0};
     // };
 
     battLvl_t batt = { .init = false };
-    #define BATT_PERIOD_MS      1000
+    config_t config;
+    static uint32_t fixture_id;
 
     sgRF_radio_t radio = {
         .usic = USIC0,
@@ -190,11 +192,15 @@ volatile debug_t debug = {0,0,0,0};
     static uint32_t last_frame_ms;
     static bool faded_out = true;   /* nothing received yet: LED is dark */
 
+    static bool identify;           /* RDM identify: blink white, DMX ignored */
+    static uint16_t frames_received;
+
     static void frame_received(const sgRF_fixFrame_t* frame) {
         last_frame = *frame;
         last_frame_ms = msTicks;
         faded_out = false;
-        show_frame(frame);
+        frames_received++;
+        if (!identify) show_frame(frame);
     }
 
     static sgRF_fixCh_t fade_ch(const sgRF_fixCh_t val, const uint32_t remaining) {
@@ -205,7 +211,7 @@ volatile debug_t debug = {0,0,0,0};
         static uint32_t last_update_ms;
         const uint32_t now = msTicks;
         const uint32_t since = now - last_frame_ms;
-        if (faded_out || since <= SIGNAL_TIMEOUT_MS || now == last_update_ms) return;
+        if (identify || faded_out || since <= SIGNAL_TIMEOUT_MS || now == last_update_ms) return;
         last_update_ms = now;
 
         const uint32_t fading = since - SIGNAL_TIMEOUT_MS;
@@ -218,6 +224,111 @@ volatile debug_t debug = {0,0,0,0};
         };
         show_frame(&dimmed);
         faded_out = (remaining == 0);
+    }
+
+    /**
+     * Identify: blink white at 2 Hz until switched off
+     */
+    #define IDENTIFY_HALF_PERIOD_MS 250
+
+    static void set_identify(const bool on) {
+        if (on == identify) return;
+        identify = on;
+        if (!on) {
+            const sgRF_fixFrame_t dark = {0};
+            show_frame(faded_out ? &dark : &last_frame);
+        }
+    }
+
+    static void handle_identify(void) {
+        static uint32_t toggle_ms;
+        static bool lit;
+        if (!identify || msTicks - toggle_ms < IDENTIFY_HALF_PERIOD_MS) return;
+        toggle_ms = msTicks;
+        lit = !lit;
+        const sgRF_fixFrame_t white = { .white = (sgRF_fixCh_t)((1UL << (8 * FIXTURE_CH_BYTES)) - 1) };
+        const sgRF_fixFrame_t dark = {0};
+        show_frame(lit ? &white : &dark);
+    }
+
+    /**
+     * Config packets from the gateway (repeated a few times, so idempotent)
+     */
+    static void apply_config(const sgRF_config_t* cfg, uint32_t* heartbeat_due_ms) {
+        if (cfg->id != fixture_id) return;
+        if (cfg->dmx_addr != SGRF_CFG_KEEP_ADDR && cfg->dmx_addr != config.dmx_addr
+            && config_dmxAddrValid(cfg->dmx_addr)) {
+            config.dmx_addr = cfg->dmx_addr;
+            config_save(&config);
+            sgRF_setDmxAddress(&radio, config.dmx_addr - 1);
+        }
+        if (cfg->identify != SGRF_CFG_KEEP_IDENTIFY) {
+            set_identify(cfg->identify != 0);
+        }
+        /* confirm soon with a heartbeat */
+        *heartbeat_due_ms = msTicks;
+    }
+
+    /**
+     * Heartbeat: about once per second. Sent in the gap after the own DMX
+     * chunk with a random delay (fixtures on the same chunk would collide),
+     * or unsynchronised when no DMX arrives.
+     */
+    #define HEARTBEAT_PERIOD_MS     900     /* + up to HEARTBEAT_JITTER_MS */
+    #define HEARTBEAT_JITTER_MS     200
+    #define HEARTBEAT_SLOT_MS       15      /* random delay after the own chunk */
+    #define HEARTBEAT_NO_DMX_MS     300     /* send unsynchronised after that */
+    #define FW_VERSION              1
+
+    static uint32_t random32(void) {
+        static uint32_t x;
+        if (x == 0) x = fixture_id | 1;
+        x ^= x << 13; x ^= x >> 17; x ^= x << 5;        /* xorshift32 */
+        return x;
+    }
+
+    static void send_heartbeat(void) {
+        static uint8_t seq;
+        static uint32_t last_ms;
+        const uint32_t now = msTicks;
+        const uint32_t elapsed = (now - last_ms) ? (now - last_ms) : 1;
+        uint32_t fps = (uint32_t)frames_received * 1000 / elapsed;
+        const sgRF_heartbeat_t hb = {
+            .type = SGRF_PKT_HEARTBEAT,
+            .seq = seq++,
+            .id = fixture_id,
+            .dmx_addr = config.dmx_addr,
+            .personality = 1,
+            .flags = (identify ? SGRF_HB_IDENTIFY : 0)
+                   | ((faded_out || now - last_frame_ms > SIGNAL_TIMEOUT_MS) ? SGRF_HB_NO_SIGNAL : 0),
+            .battery_mv = battLvl_read(&batt),
+            .rx_fps = (uint8_t)(fps > 255 ? 255 : fps),
+            .fw_version = FW_VERSION,
+        };
+        frames_received = 0;
+        last_ms = now;
+        sgRF_sendHeartbeat(&radio, &hb);
+    }
+
+    static void handle_heartbeat(const bool frame_now, uint32_t* due_ms) {
+        static bool scheduled;
+        static uint32_t send_ms;
+        const uint32_t now = msTicks;
+        if (!scheduled && (int32_t)(now - *due_ms) >= 0) {
+            if (frame_now) {
+                scheduled = true;
+                send_ms = now + random32() % HEARTBEAT_SLOT_MS;
+            }
+            else if (now - *due_ms >= HEARTBEAT_NO_DMX_MS) {
+                scheduled = true;
+                send_ms = now;
+            }
+        }
+        if (scheduled && (int32_t)(now - send_ms) >= 0) {
+            scheduled = false;
+            send_heartbeat();
+            *due_ms = now + HEARTBEAT_PERIOD_MS + random32() % HEARTBEAT_JITTER_MS;
+        }
     }
 
 
@@ -246,6 +357,9 @@ volatile debug_t debug = {0,0,0,0};
         SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
         battLvl_init(&batt);
         // boostCon_init(&boost);
+        fixture_id = config_fixtureId();
+        config_load(&config);
+        sgRF_setDmxAddress(&radio, config.dmx_addr - 1);
         sgRF_init(&radio);
 
         /* test sequence */
@@ -261,21 +375,23 @@ volatile debug_t debug = {0,0,0,0};
         sgRF_enableBroadcastReceiver(&radio);
 
 
+        uint32_t heartbeat_due_ms = 0;
         for (;;)
         {
             sgRF_handle(&radio);
 
-            if (sgRF_receivedFrame(&radio)) {
+            const bool frame_now = sgRF_receivedFrame(&radio);
+            if (frame_now) {
                 const sgRF_fixFrame_t frame = sgRF_readFrame(&radio);
                 frame_received(&frame);
             }
-            handle_signal_loss();
-
-            static uint32_t batt_ms;
-            if (msTicks - batt_ms >= BATT_PERIOD_MS) {
-                batt_ms = msTicks;
-                battLvl_read(&batt);
+            if (sgRF_receivedConfig(&radio)) {
+                const sgRF_config_t cfg = sgRF_readConfig(&radio);
+                apply_config(&cfg, &heartbeat_due_ms);
             }
+            handle_signal_loss();
+            handle_identify();
+            handle_heartbeat(frame_now, &heartbeat_due_ms);
         }
     }
 
