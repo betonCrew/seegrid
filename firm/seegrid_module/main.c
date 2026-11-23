@@ -239,14 +239,19 @@ volatile debug_t debug = {0,0,0,0};
         {
             CY_ASSERT(0);
         }
-        SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
+        /* PWM outputs idle high (= LED on) while the CCU4 timers are stopped:
+           start them dark right away, before anything slow like sgRF_init */
         led_init(&led);
+        led_setColorPreset(&led, COL_BLACK);
+        led_setWhite(&led, 0x0000);
+        led_enable(&led);
+
+        SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
         // battLvl_init(&batt);
         // boostCon_init(&boost);
         sgRF_init(&radio);
 
         /* test sequence */
-        led_enable(&led);
         for (int i=0; i<4; i++) {
             led_setColor(&led, *(led_color_t*)test_seq[i]);
             led_setWhite(&led, test_seq[i][3]);
