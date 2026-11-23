@@ -44,6 +44,8 @@
 #define PID_DEVICE_MODEL_DESC   0x0080
 #define PID_MANUFACTURER_LABEL  0x0081
 #define PID_SOFTWARE_VERSION    0x00C0
+#define PID_DMX_PERSONALITY     0x00E0
+#define PID_DMX_PERSONALITY_DESC 0x00E1
 #define PID_DMX_START_ADDRESS   0x00F0
 #define PID_SENSOR_DEFINITION   0x0200
 #define PID_SENSOR_VALUE        0x0201
@@ -60,7 +62,6 @@
 #define PREFIX_NONE             0x00
 #define PREFIX_MILLI            0x03
 
-#define FIXTURE_FOOTPRINT       4       /* W R B G, 8 bit */
 #define PRODUCT_CATEGORY_FIXTURE 0x0100
 
 typedef uint64_t uid_t;
@@ -199,6 +200,8 @@ static void handle_get(dmx_t* port, const uint8_t* req, const fixture_t* fix, co
         case PID_SUPPORTED_PARAMS:
             p = put16(p, PID_DEVICE_MODEL_DESC);
             p = put16(p, PID_MANUFACTURER_LABEL);
+            p = put16(p, PID_DMX_PERSONALITY);
+            p = put16(p, PID_DMX_PERSONALITY_DESC);
             p = put16(p, PID_SENSOR_DEFINITION);
             p = put16(p, PID_SENSOR_VALUE);
             p = put16(p, RDM_PID_LAST_SEEN);
@@ -208,9 +211,9 @@ static void handle_get(dmx_t* port, const uint8_t* req, const fixture_t* fix, co
             p = put16(p, 0x0001);                   /* device model */
             p = put16(p, PRODUCT_CATEGORY_FIXTURE);
             p = put32(p, fix->hb.fw_version);
-            p = put16(p, FIXTURE_FOOTPRINT);
+            p = put16(p, sgRF_footprint(fix->hb.personality));
             *p++ = fix->hb.personality;
-            *p++ = 1;                               /* personality count */
+            *p++ = SGRF_PERSONALITY_COUNT;
             p = put16(p, fix->hb.dmx_addr);
             p = put16(p, 0);                        /* sub devices */
             *p++ = SENSOR_COUNT;
@@ -228,6 +231,19 @@ static void handle_get(dmx_t* port, const uint8_t* req, const fixture_t* fix, co
         case PID_DMX_START_ADDRESS:
             p = put16(p, fix->hb.dmx_addr);
             break;
+        case PID_DMX_PERSONALITY:
+            *p++ = fix->hb.personality;
+            *p++ = SGRF_PERSONALITY_COUNT;
+            break;
+        case PID_DMX_PERSONALITY_DESC: {
+            if (pdl != 1) { send_nack(port, req, fix, NR_FORMAT_ERROR); return; }
+            const uint8_t pers = req[O_PD];
+            if (!sgRF_footprint(pers)) { send_nack(port, req, fix, NR_DATA_OUT_OF_RANGE); return; }
+            *p++ = pers;
+            p = put16(p, sgRF_footprint(pers));
+            p = putstr(p, pers == SGRF_PERSONALITY_16BIT ? "WRBG 16 bit" : "WRBG 8 bit");
+            break;
+        }
         case PID_IDENTIFY_DEVICE: {
             bool on = (fix->hb.flags & SGRF_HB_IDENTIFY) != 0;
             if (fix->pending_tx && fix->pending.identify != SGRF_CFG_KEEP_IDENTIFY) on = fix->pending.identify;
@@ -281,19 +297,31 @@ static void handle_set(dmx_t* port, const uint8_t* req, fixture_t* fix, const ui
         case PID_DMX_START_ADDRESS: {
             if (pdl != 2) { send_nack(port, req, fix, NR_FORMAT_ERROR); return; }
             const uint16_t addr = ((uint16_t)pd[0] << 8) | pd[1];
-            if (!sgRF_dmxAddressValid(addr, FIXTURE_FOOTPRINT)) { send_nack(port, req, fix, NR_DATA_OUT_OF_RANGE); return; }
-            fixtures_queueConfig(fix, addr, SGRF_CFG_KEEP_IDENTIFY);
+            if (!sgRF_dmxAddressValid(addr, sgRF_footprint(fix->hb.personality))) { send_nack(port, req, fix, NR_DATA_OUT_OF_RANGE); return; }
+            fixtures_queueConfig(fix, addr, SGRF_CFG_KEEP_IDENTIFY, SGRF_CFG_KEEP_PERSONALITY);
             fix->hb.dmx_addr = addr;    /* the next heartbeat confirms or corrects it */
+            break;
+        }
+        case PID_DMX_PERSONALITY: {
+            if (pdl != 1) { send_nack(port, req, fix, NR_FORMAT_ERROR); return; }
+            const uint8_t pers = pd[0];
+            /* the wider footprint must still fit the RF chunk at the current address */
+            if (!sgRF_footprint(pers) || !sgRF_dmxAddressValid(fix->hb.dmx_addr, sgRF_footprint(pers))) {
+                send_nack(port, req, fix, NR_DATA_OUT_OF_RANGE);
+                return;
+            }
+            fixtures_queueConfig(fix, SGRF_CFG_KEEP_ADDR, SGRF_CFG_KEEP_IDENTIFY, pers);
+            fix->hb.personality = pers;
             break;
         }
         case PID_IDENTIFY_DEVICE:
             if (pdl != 1) { send_nack(port, req, fix, NR_FORMAT_ERROR); return; }
             if (pd[0] > 1) { send_nack(port, req, fix, NR_DATA_OUT_OF_RANGE); return; }
-            fixtures_queueConfig(fix, SGRF_CFG_KEEP_ADDR, pd[0]);
+            fixtures_queueConfig(fix, SGRF_CFG_KEEP_ADDR, pd[0], SGRF_CFG_KEEP_PERSONALITY);
             break;
         case PID_SUPPORTED_PARAMS: case PID_DEVICE_INFO: case PID_DEVICE_MODEL_DESC:
         case PID_MANUFACTURER_LABEL: case PID_SOFTWARE_VERSION: case PID_SENSOR_DEFINITION:
-        case PID_SENSOR_VALUE: case RDM_PID_LAST_SEEN:
+        case PID_SENSOR_VALUE: case RDM_PID_LAST_SEEN: case PID_DMX_PERSONALITY_DESC:
             send_nack(port, req, fix, NR_UNSUPPORTED_CC);
             return;
         default:

@@ -306,7 +306,6 @@ bool sgRF_init(sgRF_radio_t* radio){
         if(!_sgRF_setState(radio, FIX_BROADCAST)) return;
 
         /* radio->_addr: set by the application before (sgRF_setDmxAddress) */
-        radio->_width = FIXTURE_CH_CNT;
         const uint32_t dmx_chunk_addr = _sgRF_translateAddress(radio->_addr);
 
         /* config radio channels */
@@ -405,39 +404,46 @@ bool sgRF_init(sgRF_radio_t* radio){
         return radio->_frame_flag;
     }
 
-    /* DMX convention: multi-byte channels are sent coarse (high byte) first */
-    static sgRF_fixCh_t _sgRF_getCh(const uint8_t* src) {
-        sgRF_fixCh_t val = 0;
-        for (uint8_t i = 0; i < FIXTURE_CH_BYTES; i++) {
-            val = (sgRF_fixCh_t)((val << 8) | src[i]);
-        }
-        return val;
-    }
-
-    static void _sgRF_putCh(uint8_t* dst, sgRF_fixCh_t val) {
-        for (uint8_t i = FIXTURE_CH_BYTES; i > 0; i--) {
-            dst[i - 1] = (uint8_t)val;
-            val = (sgRF_fixCh_t)(val >> 8);
+    uint8_t sgRF_footprint(const uint8_t personality) {
+        switch (personality) {
+            case SGRF_PERSONALITY_8BIT:  return FIXTURE_CH_CNT;
+            case SGRF_PERSONALITY_16BIT: return 2 * FIXTURE_CH_CNT;
+            default:                     return 0;
         }
     }
 
-    const sgRF_fixFrame_t sgRF_readFrame(sgRF_radio_t* radio) {
-        const uint8_t* src = radio->data + (radio->_addr % 32);
+    /* DMX convention: 16 bit channels are sent coarse (high byte) first.
+       8 bit values are scaled to 16 bit (0xFF -> 0xFFFF) */
+    static sgRF_fixCh_t _sgRF_getCh(const uint8_t* src, const bool wide) {
+        return wide ? (sgRF_fixCh_t)(((uint16_t)src[0] << 8) | src[1]) : (sgRF_fixCh_t)(src[0] * 257U);
+    }
+
+    static void _sgRF_putCh(uint8_t* dst, const sgRF_fixCh_t val, const bool wide) {
+        dst[0] = (uint8_t)(val >> 8);
+        if (wide) dst[1] = (uint8_t)val;
+    }
+
+    const sgRF_fixFrame_t sgRF_readFrame(sgRF_radio_t* radio, const uint8_t personality) {
+        const uint8_t* src = radio->data + (radio->_addr % BROADCAST_PL_WITDH);
+        const bool wide = (personality == SGRF_PERSONALITY_16BIT);
+        const uint8_t w = wide ? 2 : 1;
         radio->_frame_flag = false;
         sgRF_fixFrame_t frame = {
-            .white = _sgRF_getCh(src + 0 * FIXTURE_CH_BYTES),
-            .red   = _sgRF_getCh(src + 1 * FIXTURE_CH_BYTES),
-            .blue  = _sgRF_getCh(src + 2 * FIXTURE_CH_BYTES),
-            .green = _sgRF_getCh(src + 3 * FIXTURE_CH_BYTES),
+            .white = _sgRF_getCh(src + 0 * w, wide),
+            .red   = _sgRF_getCh(src + 1 * w, wide),
+            .blue  = _sgRF_getCh(src + 2 * w, wide),
+            .green = _sgRF_getCh(src + 3 * w, wide),
         };
         return frame;
     }
 
-    void sgRF_writeFrame(uint8_t* dst, const sgRF_fixFrame_t* frame) {
-        _sgRF_putCh(dst + 0 * FIXTURE_CH_BYTES, frame->white);
-        _sgRF_putCh(dst + 1 * FIXTURE_CH_BYTES, frame->red);
-        _sgRF_putCh(dst + 2 * FIXTURE_CH_BYTES, frame->blue);
-        _sgRF_putCh(dst + 3 * FIXTURE_CH_BYTES, frame->green);
+    void sgRF_writeFrame(uint8_t* dst, const sgRF_fixFrame_t* frame, const uint8_t personality) {
+        const bool wide = (personality == SGRF_PERSONALITY_16BIT);
+        const uint8_t w = wide ? 2 : 1;
+        _sgRF_putCh(dst + 0 * w, frame->white, wide);
+        _sgRF_putCh(dst + 1 * w, frame->red,   wide);
+        _sgRF_putCh(dst + 2 * w, frame->blue,  wide);
+        _sgRF_putCh(dst + 3 * w, frame->green, wide);
     }
 
     static void _sgRF_handleFixture(sgRF_radio_t* radio){

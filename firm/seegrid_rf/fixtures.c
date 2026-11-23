@@ -31,12 +31,13 @@ void fixtures_heartbeat(const sgRF_heartbeat_t* hb, const uint32_t now_ms) {
     if (fix->pending_tx
         && (fix->pending.dmx_addr == SGRF_CFG_KEEP_ADDR || fix->pending.dmx_addr == hb->dmx_addr)
         && (fix->pending.identify == SGRF_CFG_KEEP_IDENTIFY
-            || (fix->pending.identify != 0) == ((hb->flags & SGRF_HB_IDENTIFY) != 0))) {
+            || (fix->pending.identify != 0) == ((hb->flags & SGRF_HB_IDENTIFY) != 0))
+        && (fix->pending.personality == SGRF_CFG_KEEP_PERSONALITY || fix->pending.personality == hb->personality)) {
         fix->pending_tx = 0;
     }
 }
 
-void fixtures_queueConfig(fixture_t* fix, const uint16_t dmx_addr, const uint8_t identify) {
+void fixtures_queueConfig(fixture_t* fix, const uint16_t dmx_addr, const uint8_t identify, const uint8_t personality) {
     static uint8_t seq;
     if (fix->pending_tx == 0) {
         memset(&fix->pending, 0, sizeof(fix->pending));
@@ -44,10 +45,12 @@ void fixtures_queueConfig(fixture_t* fix, const uint16_t dmx_addr, const uint8_t
         fix->pending.id = fix->hb.id;
         fix->pending.dmx_addr = SGRF_CFG_KEEP_ADDR;
         fix->pending.identify = SGRF_CFG_KEEP_IDENTIFY;
+        fix->pending.personality = SGRF_CFG_KEEP_PERSONALITY;
     }
     /* merge with a change that is still being sent */
     if (dmx_addr != SGRF_CFG_KEEP_ADDR) fix->pending.dmx_addr = dmx_addr;
     if (identify != SGRF_CFG_KEEP_IDENTIFY) fix->pending.identify = identify;
+    if (personality != SGRF_CFG_KEEP_PERSONALITY) fix->pending.personality = personality;
     fix->pending.seq = seq++;
     fix->pending_tx = FIXTURE_CONFIG_REPEAT;
 }

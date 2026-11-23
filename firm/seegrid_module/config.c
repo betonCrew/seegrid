@@ -14,7 +14,8 @@
 typedef struct {
     uint32_t    magic;
     uint16_t    dmx_addr;
-    uint16_t    reserved;
+    uint8_t     personality;    /* 0 in blocks written before personalities existed */
+    uint8_t     reserved;
     uint32_t    reserved2;
     uint32_t    crc;            /* CRC32 of the 12 bytes before */
 } _config_block_t;
@@ -36,19 +37,20 @@ uint32_t config_fixtureId(void) {
     return _crc32((const uint8_t*)UCID_ADDR, UCID_LEN);
 }
 
-bool config_dmxAddrValid(const uint16_t dmx_addr) {
-    return sgRF_dmxAddressValid(dmx_addr, CONFIG_FOOTPRINT);
+bool config_valid(const uint16_t dmx_addr, const uint8_t personality) {
+    const uint8_t footprint = sgRF_footprint(personality);
+    return footprint && sgRF_dmxAddressValid(dmx_addr, footprint);
 }
 
 void config_load(config_t* cfg) {
     const _config_block_t* b = (const _config_block_t*)CONFIG_PAGE_ADDR;
-    if (b->magic == CONFIG_MAGIC
-        && b->crc == _crc32((const uint8_t*)b, offsetof(_config_block_t, crc))
-        && config_dmxAddrValid(b->dmx_addr)) {
+    cfg->dmx_addr = CONFIG_DEFAULT_ADDR;
+    cfg->personality = SGRF_PERSONALITY_DEFAULT;
+    if (b->magic != CONFIG_MAGIC || b->crc != _crc32((const uint8_t*)b, offsetof(_config_block_t, crc))) return;
+    const uint8_t personality = sgRF_footprint(b->personality) ? b->personality : SGRF_PERSONALITY_DEFAULT;
+    if (config_valid(b->dmx_addr, personality)) {
         cfg->dmx_addr = b->dmx_addr;
-    }
-    else {
-        cfg->dmx_addr = CONFIG_DEFAULT_ADDR;
+        cfg->personality = personality;
     }
 }
 
@@ -58,6 +60,7 @@ bool config_save(const config_t* cfg) {
     _config_block_t* b = (_config_block_t*)page;
     b->magic = CONFIG_MAGIC;
     b->dmx_addr = cfg->dmx_addr;
+    b->personality = cfg->personality;
     b->crc = _crc32((const uint8_t*)b, offsetof(_config_block_t, crc));
 
     XMC_FLASH_ErasePage((uint32_t*)CONFIG_PAGE_ADDR);

@@ -15,9 +15,17 @@
  * Fixture related configurations
  */
 
-    #define FIXTURE_CH_CNT      4
-    #define FIXTURE_CH_BYTES    1   /* 2: 16 bit channels, high byte first (DMX coarse/fine) */
-    #define FIXTURE_FRAME_BYTES (FIXTURE_CH_CNT * FIXTURE_CH_BYTES)
+    /**
+     * 4 colour channels W R B G; the personality (RDM DMX_PERSONALITY) sets
+     * their width, chosen per fixture:
+     *  1: 8 bit  -> 4 DMX channels
+     *  2: 16 bit -> 8 DMX channels, high byte first (DMX coarse/fine), default
+     */
+    #define FIXTURE_CH_CNT              4
+    #define SGRF_PERSONALITY_8BIT       1
+    #define SGRF_PERSONALITY_16BIT      2
+    #define SGRF_PERSONALITY_COUNT      2
+    #define SGRF_PERSONALITY_DEFAULT    SGRF_PERSONALITY_16BIT
 
     #define ADDR_WIDTH          3
     #define AUTO_RETRANS        0
@@ -73,8 +81,9 @@
     #define SGRF_HB_NO_SIGNAL   0x02    /* no DMX frame for SIGNAL_TIMEOUT */
 
     /* config fields meaning "leave as is" */
-    #define SGRF_CFG_KEEP_ADDR      0x0000
-    #define SGRF_CFG_KEEP_IDENTIFY  0xFF
+    #define SGRF_CFG_KEEP_ADDR          0x0000
+    #define SGRF_CFG_KEEP_IDENTIFY      0xFF
+    #define SGRF_CFG_KEEP_PERSONALITY   0x00
 
 
 /**
@@ -82,11 +91,8 @@
  */
 
 
-    #if (FIXTURE_CH_BYTES == 1)
-        typedef uint8_t sgRF_fixCh_t;
-    #elif (FIXTURE_CH_BYTES == 2)
-        typedef uint16_t sgRF_fixCh_t;
-    #endif
+    /* channel value, always on the 16 bit scale (8 bit values are scaled up) */
+    typedef uint16_t sgRF_fixCh_t;
 
     #if (FIXTURE_CH_CNT == 4)
         typedef struct {
@@ -127,13 +133,13 @@
         uint32_t    id;             /* target fixture */
         uint16_t    dmx_addr;       /* new start address, SGRF_CFG_KEEP_ADDR = keep */
         uint8_t     identify;       /* 0 off, 1 on, SGRF_CFG_KEEP_IDENTIFY = keep */
-        uint8_t     reserved[7];
+        uint8_t     personality;    /* SGRF_PERSONALITY_*, SGRF_CFG_KEEP_PERSONALITY = keep */
+        uint8_t     reserved[6];
     } sgRF_config_t;
 
     _Static_assert(sizeof(sgRF_heartbeat_t) == CONTROL_PL_WIDTH, "heartbeat size");
     _Static_assert(sizeof(sgRF_config_t) == CONTROL_PL_WIDTH, "config size");
 
-    typedef uint8_t _sgRF_dmx_width_t;
 
     typedef struct {
         XMC_USIC_t *const       usic;
@@ -148,7 +154,6 @@
         uint8_t*                data;
         _sgRF_state_t           _state;
         _sgRF_dmx_addr_t        _addr;
-        _sgRF_dmx_width_t       _width;
         volatile bool           _irq_pending;
         volatile bool           _tx_flag;
         volatile bool           _rx_flag;
@@ -265,12 +270,17 @@
         /**
          * return last frame from radio buffer
          */
-        const sgRF_fixFrame_t sgRF_readFrame(sgRF_radio_t* radio);
+        const sgRF_fixFrame_t sgRF_readFrame(sgRF_radio_t* radio, const uint8_t personality);
 
         /**
-         * encode a fixture frame into its DMX byte layout (FIXTURE_FRAME_BYTES at dst)
+         * encode a fixture frame into its DMX byte layout (sgRF_footprint bytes at dst)
          */
-        void sgRF_writeFrame(uint8_t* dst, const sgRF_fixFrame_t* frame);
+        void sgRF_writeFrame(uint8_t* dst, const sgRF_fixFrame_t* frame, const uint8_t personality);
+
+        /**
+         * DMX channels of a fixture in the given personality, 0 if there is no such personality
+         */
+        uint8_t sgRF_footprint(const uint8_t personality);
 
 
 #endif

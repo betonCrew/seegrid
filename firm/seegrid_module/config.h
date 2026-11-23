@@ -10,9 +10,8 @@
  */
 typedef struct {
     uint16_t    dmx_addr;       /* DMX start address 1..512 */
+    uint8_t     personality;    /* SGRF_PERSONALITY_* (8 / 16 bit channels) */
 } config_t;
-
-#define CONFIG_FOOTPRINT    4   /* DMX channels per fixture (W R B G, 8 bit) */
 
 /**
  * fixture id: CRC32 of the 16 byte unique chip id
@@ -30,8 +29,8 @@ void config_load(config_t* cfg);
 bool config_save(const config_t* cfg);
 
 /**
- * start address the fixture can listen to (see sgRF_dmxAddressValid)
+ * address and personality the fixture can work with (see sgRF_dmxAddressValid)
  */
-bool config_dmxAddrValid(const uint16_t dmx_addr);
+bool config_valid(const uint16_t dmx_addr, const uint8_t personality);
 
 #endif

@@ -163,13 +163,12 @@ volatile debug_t debug = {0,0,0,0};
     }
 
     /**
-     * DMX channel value -> 16 bit PWM compare value
+     * DMX channel value (16 bit scale) -> 16 bit PWM compare value
      * quadratic curve (gamma 2) so dimming looks even to the eye
      */
     static led_val_t dmx_to_pwm(const sgRF_fixCh_t val) {
-        const uint32_t ch_max = (1UL << (8 * FIXTURE_CH_BYTES)) - 1;
-        const uint32_t v16 = (uint32_t)val * 0xFFFF / ch_max;
-        return (led_val_t)((v16 * v16 + 0xFFFE) / 0xFFFF);
+        const uint32_t v = val;
+        return (led_val_t)((v * v + 0xFFFE) / 0xFFFF);
     }
 
     static void show_frame(const sgRF_fixFrame_t* frame) {
@@ -246,7 +245,7 @@ volatile debug_t debug = {0,0,0,0};
         if (!identify || msTicks - toggle_ms < IDENTIFY_HALF_PERIOD_MS) return;
         toggle_ms = msTicks;
         lit = !lit;
-        const sgRF_fixFrame_t white = { .white = (sgRF_fixCh_t)((1UL << (8 * FIXTURE_CH_BYTES)) - 1) };
+        const sgRF_fixFrame_t white = { .white = 0xFFFF };
         const sgRF_fixFrame_t dark = {0};
         show_frame(lit ? &white : &dark);
     }
@@ -256,9 +255,13 @@ volatile debug_t debug = {0,0,0,0};
      */
     static void apply_config(const sgRF_config_t* cfg, uint32_t* heartbeat_due_ms) {
         if (cfg->id != fixture_id) return;
-        if (cfg->dmx_addr != SGRF_CFG_KEEP_ADDR && cfg->dmx_addr != config.dmx_addr
-            && config_dmxAddrValid(cfg->dmx_addr)) {
-            config.dmx_addr = cfg->dmx_addr;
+        const config_t next = {
+            .dmx_addr = (cfg->dmx_addr != SGRF_CFG_KEEP_ADDR) ? cfg->dmx_addr : config.dmx_addr,
+            .personality = (cfg->personality != SGRF_CFG_KEEP_PERSONALITY) ? cfg->personality : config.personality,
+        };
+        if ((next.dmx_addr != config.dmx_addr || next.personality != config.personality)
+            && config_valid(next.dmx_addr, next.personality)) {
+            config = next;
             config_save(&config);
             sgRF_setDmxAddress(&radio, config.dmx_addr - 1);
         }
@@ -298,7 +301,7 @@ volatile debug_t debug = {0,0,0,0};
             .seq = seq++,
             .id = fixture_id,
             .dmx_addr = config.dmx_addr,
-            .personality = 1,
+            .personality = config.personality,
             .flags = (identify ? SGRF_HB_IDENTIFY : 0)
                    | ((faded_out || now - last_frame_ms > SIGNAL_TIMEOUT_MS) ? SGRF_HB_NO_SIGNAL : 0),
             .battery_mv = battLvl_read(&batt),
@@ -382,7 +385,7 @@ volatile debug_t debug = {0,0,0,0};
 
             const bool frame_now = sgRF_receivedFrame(&radio);
             if (frame_now) {
-                const sgRF_fixFrame_t frame = sgRF_readFrame(&radio);
+                const sgRF_fixFrame_t frame = sgRF_readFrame(&radio, config.personality);
                 frame_received(&frame);
             }
             if (sgRF_receivedConfig(&radio)) {

@@ -29,13 +29,13 @@ static bool timer_expired(const uint16_t period) {
  */
 #define TEST_FRAME_PERIOD_MS    40      /* ~25 frames/s */
 #define TEST_CHANNELS           512
-#define TEST_FIXTURES           (TEST_CHANNELS / FIXTURE_FRAME_BYTES)
+#define TEST_PERSONALITY        SGRF_PERSONALITY_DEFAULT
+#define TEST_FIXTURES           (TEST_CHANNELS / (2 * FIXTURE_CH_CNT))
 #define TEST_HUE_STEP           4       /* hue advance per frame, 0..1535 per revolution */
-#define TEST_CH_MAX             ((1UL << (8 * FIXTURE_CH_BYTES)) - 1)
 
 /* 8 bit -> full fixture channel range */
 static sgRF_fixCh_t scale(uint8_t v) {
-    return (sgRF_fixCh_t)(v * TEST_CH_MAX / 255);
+    return (sgRF_fixCh_t)(v * 257U);
 }
 
 /* hue 0..1535 (6 sectors * 256) -> full saturation/brightness color */
@@ -61,7 +61,7 @@ static void test_colorwheel(dmx_buf_t buf) {
     sgRF_fixFrame_t fix;
     for (uint16_t i = 0; i < TEST_FIXTURES; i++) {
         hue_to_frame((hue + (uint32_t)i * 1536 / TEST_FIXTURES) % 1536, &fix);
-        sgRF_writeFrame(&buf[i * FIXTURE_FRAME_BYTES], &fix);
+        sgRF_writeFrame(&buf[i * sgRF_footprint(TEST_PERSONALITY)], &fix, TEST_PERSONALITY);
     }
     hue = (hue + TEST_HUE_STEP) % 1536;
 }

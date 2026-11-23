@@ -31,9 +31,9 @@ fixture_t* fixtures_find(const uint32_t id);
 fixture_t* fixtures_at(const uint16_t index);
 
 /**
- * queue a config change; dmx_addr / identify may be SGRF_CFG_KEEP_*
+ * queue a config change; each value may be SGRF_CFG_KEEP_*
  */
-void fixtures_queueConfig(fixture_t* fix, const uint16_t dmx_addr, const uint8_t identify);
+void fixtures_queueConfig(fixture_t* fix, const uint16_t dmx_addr, const uint8_t identify, const uint8_t personality);
 
 /**
  * next config packet to broadcast (round robin over the pending ones), NULL if none
