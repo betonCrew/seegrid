@@ -79,6 +79,7 @@ volatile debug_t debug = {0,0,0,0};
 
     dmx_t dmx = {
         .usic_ch = CYBSP_DEBUG_UART_HW,
+        .irqN = CYBSP_DEBUG_UART_RECEIVE_BUFFER_STANDARD_EVENT_IRQN,
         .buffer = universe
     };
 
@@ -158,6 +159,10 @@ volatile debug_t debug = {0,0,0,0};
 
     void IRQ9_Handler (void) {
         sgRF_radioIrqHandler(&radioB);
+    }
+
+    void CYBSP_DEBUG_UART_RECEIVE_BUFFER_STANDARD_EVENT_HANDLER (void) {
+        dmx_rxIrqHandler(&dmx);
     }
 
 int main(void)

@@ -2,13 +2,14 @@
 #include "cybsp.h"
 #include "cy_utils.h"
 #include "seeGridRF.h"
+#include <string.h>
 
-#define TESTING
+/* #define TESTING */   /* send a rotating colorwheel instead of received DMX */
 
+#ifdef TESTING
 extern volatile uint32_t msTicks;
 static uint32_t timer = 0;
 
-#ifdef TESTING
 static void timer_reset() {
     timer = msTicks;
 }
@@ -67,6 +68,64 @@ static void test_colorwheel(dmx_buf_t buf) {
 #endif
 
 /**
+ * Enttec DMX USB Pro protocol (host -> widget), received on the debug UART
+ *      0x7E | label | len LSB | len MSB | data[len] | 0xE7
+ *      label 6 (Output Only Send DMX Packet): data = start code + up to 512 channels
+ */
+#define ENTTEC_SOM              0x7E
+#define ENTTEC_EOM              0xE7
+#define ENTTEC_LABEL_SEND_DMX   6
+#define ENTTEC_MAX_LEN          600
+
+static void enttec_rx(dmx_t* dmx, const uint8_t byte) {
+    switch (dmx->_rx_state) {
+        case _DMX_RX_SOM:
+            if (byte == ENTTEC_SOM) dmx->_rx_state = _DMX_RX_LABEL;
+            break;
+        case _DMX_RX_LABEL:
+            dmx->_rx_label = byte;
+            dmx->_rx_state = _DMX_RX_LEN_LO;
+            break;
+        case _DMX_RX_LEN_LO:
+            dmx->_rx_len = byte;
+            dmx->_rx_state = _DMX_RX_LEN_HI;
+            break;
+        case _DMX_RX_LEN_HI:
+            dmx->_rx_len |= (uint16_t)byte << 8;
+            dmx->_rx_pos = 0;
+            if (dmx->_rx_len > ENTTEC_MAX_LEN) {
+                dmx->errors++;
+                dmx->_rx_state = _DMX_RX_SOM;
+                break;
+            }
+            dmx->_rx_keep = (dmx->_rx_label == ENTTEC_LABEL_SEND_DMX);
+            dmx->_rx_state = dmx->_rx_len ? _DMX_RX_DATA : _DMX_RX_EOM;
+            break;
+        case _DMX_RX_DATA:
+            if (dmx->_rx_keep && dmx->_rx_pos < sizeof(dmx->_rx_data[0])) {
+                dmx->_rx_data[dmx->_rx_fill][dmx->_rx_pos] = byte;
+            }
+            if (++dmx->_rx_pos >= dmx->_rx_len) dmx->_rx_state = _DMX_RX_EOM;
+            break;
+        case _DMX_RX_EOM:
+            if (byte != ENTTEC_EOM) {
+                dmx->errors++;
+            }
+            else if (dmx->_rx_keep && dmx->_rx_data[dmx->_rx_fill][0] == 0x00) {
+                /* start code 0 = dimmer data; others (RDM, text, ...) are ignored.
+                   publish this buffer (newest frame wins) and fill the other one next */
+                const uint16_t n = (dmx->_rx_len < sizeof(dmx->_rx_data[0])) ? dmx->_rx_len : sizeof(dmx->_rx_data[0]);
+                dmx->_rx_channels[dmx->_rx_fill] = n - 1;
+                dmx->_rx_fill ^= 1;
+                dmx->_rx_ready = true;
+                dmx->frames++;
+            }
+            dmx->_rx_state = _DMX_RX_SOM;
+            break;
+    }
+}
+
+/**
  * User Commands
  */
     #ifdef TESTING
@@ -75,7 +134,12 @@ static void test_colorwheel(dmx_buf_t buf) {
     }
     #else
     void dmx_init(dmx_t* dmx){
-        /* configured and initialized via config tool */
+        /* UART, RX FIFO and its interrupt node are configured via config tool */
+        dmx->_rx_state = _DMX_RX_SOM;
+        dmx->_rx_fill = 0;
+        dmx->_rx_ready = false;
+        NVIC_ClearPendingIRQ(dmx->irqN);
+        NVIC_EnableIRQ(dmx->irqN);
     }
     #endif
     
@@ -88,10 +152,27 @@ static void test_colorwheel(dmx_buf_t buf) {
         }
     }
     #else
-    void dmx_handle(dmx_t* conf) {
-
+    void dmx_handle(dmx_t* dmx) {
+        if (!dmx->_rx_ready) return;
+        /* runs in the main loop like the broadcast, so the universe never changes mid-broadcast.
+           the interrupt is held off during the copy (~50 us, the RX FIFO covers 320 us),
+           so it cannot publish into the buffer being copied */
+        NVIC_DisableIRQ(dmx->irqN);
+        const uint8_t ready = dmx->_rx_fill ^ 1;
+        const uint16_t channels = dmx->_rx_channels[ready];
+        memcpy(dmx->buffer, &dmx->_rx_data[ready][1], channels);
+        memset(dmx->buffer + channels, 0, DMX_CHANNELS - channels);
+        dmx->_rx_ready = false;
+        NVIC_EnableIRQ(dmx->irqN);
+        dmx->_new_frame = true;
     }
     #endif
+
+    void dmx_rxIrqHandler(dmx_t* dmx) {
+        while (!XMC_USIC_CH_RXFIFO_IsEmpty(dmx->usic_ch)) {
+            enttec_rx(dmx, (uint8_t)XMC_USIC_CH_RXFIFO_GetData(dmx->usic_ch));
+        }
+    }
 
     bool dmx_newFrame(dmx_t* dmx) {
         return dmx->_new_frame;
