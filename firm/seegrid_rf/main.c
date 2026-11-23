@@ -184,7 +184,7 @@ int main(void)
 
     SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
 
-    dmx_handle(&dmx);
+    dmx_init(&dmx);
     sgRF_init(&radioA);
     sgRF_init(&radioB);
     #ifdef RF_LOOPBACK_TEST
