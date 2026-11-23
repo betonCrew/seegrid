@@ -217,17 +217,6 @@ volatile debug_t debug = {0,0,0,0};
 /* [] END OF FILE */
 
 
-
-
-/**
- *  Der Schlachtplan "Timer Boje"
- *  ===================================
- * 
- *  [ ] wie uhr stellen?
- *  [ ] Daten erstellen
- *  [ ] Daten konvertieren
- */
-
 /*
 
 Memory Layout
