@@ -30,8 +30,7 @@ void config_load(config_t* cfg);
 bool config_save(const config_t* cfg);
 
 /**
- * the fixture listens to one 32 byte RF chunk: its channels must not cross
- * a chunk boundary
+ * start address the fixture can listen to (see sgRF_dmxAddressValid)
  */
 bool config_dmxAddrValid(const uint16_t dmx_addr);
 

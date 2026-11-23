@@ -226,6 +226,12 @@
         void sgRF_enableBroadcastReceiver(sgRF_radio_t* radio);
 
         /**
+         * a fixture listens to one 32 byte chunk: its channels must not cross a
+         * chunk boundary. dmx_addr = start address 1..512
+         */
+        bool sgRF_dmxAddressValid(const uint16_t dmx_addr, const uint8_t footprint);
+
+        /**
          * set the DMX channel offset (start address - 1) the fixture listens to
          */
         void sgRF_setDmxAddress(sgRF_radio_t* radio, const _sgRF_dmx_addr_t offset);

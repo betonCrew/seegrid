@@ -350,6 +350,11 @@ bool sgRF_init(sgRF_radio_t* radio){
         _sgRF_resetState(radio);
     }
 
+    bool sgRF_dmxAddressValid(const uint16_t dmx_addr, const uint8_t footprint) {
+        if (dmx_addr < 1 || dmx_addr > 512) return false;
+        return ((dmx_addr - 1) % BROADCAST_PL_WITDH) + footprint <= BROADCAST_PL_WITDH;
+    }
+
     void sgRF_setDmxAddress(sgRF_radio_t* radio, const _sgRF_dmx_addr_t offset) {
         radio->_addr = offset;
         if (radio->_state != FIX_BROADCAST) return;

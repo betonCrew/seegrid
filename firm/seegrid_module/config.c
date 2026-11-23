@@ -37,9 +37,7 @@ uint32_t config_fixtureId(void) {
 }
 
 bool config_dmxAddrValid(const uint16_t dmx_addr) {
-    if (dmx_addr < 1 || dmx_addr > 512) return false;
-    const uint16_t offset = (dmx_addr - 1) % BROADCAST_PL_WITDH;
-    return offset + CONFIG_FOOTPRINT <= BROADCAST_PL_WITDH;
+    return sgRF_dmxAddressValid(dmx_addr, CONFIG_FOOTPRINT);
 }
 
 void config_load(config_t* cfg) {
