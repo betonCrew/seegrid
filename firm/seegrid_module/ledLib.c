@@ -53,7 +53,7 @@ void led_setColorPreset(const led_t* led, const color_preset_t preset){
         XMC_CCU4_SLICE_SetTimerCompareMatch(led->channel[RGBW_R_CH].timerHw, color_presetGetRed(preset));
         XMC_CCU4_SLICE_SetTimerCompareMatch(led->channel[RGBW_G_CH].timerHw, color_presetGetGreen(preset));
         XMC_CCU4_SLICE_SetTimerCompareMatch(led->channel[RGBW_B_CH].timerHw, color_presetGetBlue(preset));
-        XMC_CCU4_SLICE_SetTimerCompareMatch(led->channel[RGBW_B_CH].timerHw, color_presetGetWhite(preset));
+        XMC_CCU4_SLICE_SetTimerCompareMatch(led->channel[RGBW_W_CH].timerHw, color_presetGetWhite(preset));
         XMC_CCU4_EnableShadowTransfer(PWM_GEN_HW, XMC_CCU4_SHADOW_TRANSFER_SLICE_0);
         XMC_CCU4_EnableShadowTransfer(PWM_GEN_HW, XMC_CCU4_SHADOW_TRANSFER_SLICE_1);
         XMC_CCU4_EnableShadowTransfer(PWM_GEN_HW, XMC_CCU4_SHADOW_TRANSFER_SLICE_2);
