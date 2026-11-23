@@ -8,7 +8,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Cell, Paragraph, Row, Table, TableState, Wrap};
 use ratatui::Frame;
 
-use crate::pattern::FIXTURE_CHANNELS;
+use crate::layout;
 use crate::state::{Shared, Source};
 
 /// UI-only state (selection, address input)
@@ -53,7 +53,7 @@ pub fn draw(frame: &mut Frame, st: &Shared, view: &View) {
             Span::raw("   Enter set   Esc cancel").dark_gray(),
         ]),
         None => Line::from(
-            " a Art-Net  t test  b blackout   \u{2191}\u{2193} select  e address  i identify  d discover   q quit ",
+            " a Art-Net  t test  b blackout   \u{2191}\u{2193} select  e address  p 8/16 bit  i identify  d discover   q quit ",
         )
         .dark_gray(),
     };
@@ -76,6 +76,12 @@ fn draw_fixtures(frame: &mut Frame, st: &Shared, view: &View, area: Rect, now: I
                 let c = Cell::from(format!("{:.2} V", mv as f32 / 1000.0));
                 if mv < BATTERY_LOW_MV { c.red() } else { c }
             });
+            let mode = match f.personality {
+                Some(layout::PERSONALITY_8BIT) => Cell::from("8 bit"),
+                Some(layout::PERSONALITY_16BIT) => Cell::from("16 bit"),
+                Some(p) => Cell::from(format!("pers {p}")),
+                None => dash(),
+            };
             let fps = f.dmx_fps.map_or_else(dash, |v| Cell::from(v.to_string()));
             let seen = f.last_seen_age(now).map_or_else(dash, |age| {
                 let c = Cell::from(age_text(age));
@@ -93,7 +99,7 @@ fn draw_fixtures(frame: &mut Frame, st: &Shared, view: &View, area: Rect, now: I
                 None => dash(),
             };
             let note = f.error.as_deref().map_or_else(|| Cell::from(""), |e| Cell::from(e.to_owned()).red());
-            Row::new(vec![Cell::from(uid.to_string()), addr, battery, fps, seen, identify, note])
+            Row::new(vec![Cell::from(uid.to_string()), addr, mode, battery, fps, seen, identify, note])
         })
         .collect();
 
@@ -109,6 +115,7 @@ fn draw_fixtures(frame: &mut Frame, st: &Shared, view: &View, area: Rect, now: I
         [
             Constraint::Length(14),
             Constraint::Length(5),
+            Constraint::Length(7),
             Constraint::Length(8),
             Constraint::Length(5),
             Constraint::Length(15),
@@ -116,7 +123,7 @@ fn draw_fixtures(frame: &mut Frame, st: &Shared, view: &View, area: Rect, now: I
             Constraint::Min(10),
         ],
     )
-    .header(Row::new(["UID", "Addr", "Battery", "DMX/s", "Last seen", "Identify", ""]).dark_gray())
+    .header(Row::new(["UID", "Addr", "Mode", "Battery", "DMX/s", "Last seen", "Identify", ""]).dark_gray())
     .row_highlight_style(Style::new().bg(Color::Rgb(40, 40, 70)).add_modifier(Modifier::BOLD))
     .block(Block::bordered().title(title));
 
@@ -190,23 +197,32 @@ fn output_box(st: &Shared) -> Paragraph<'static> {
     .block(Block::bordered().title(" Output "))
 }
 
-/// Output as fixtures (4 channels W R B G each), one coloured cell per fixture.
+/// Output as the discovered fixtures see it: one coloured cell per fixture.
 fn draw_preview(frame: &mut Frame, st: &Shared, area: Rect) {
-    let block = Block::bordered().title(" Output preview: fixtures, 4 ch W R B G, 8 bit ");
+    let block = Block::bordered().title(" Output preview per fixture ");
     let inner = block.inner(area);
     frame.render_widget(block, area);
+    if st.fixtures.is_empty() {
+        frame.render_widget(Paragraph::new("no fixtures discovered").dark_gray(), inner);
+        return;
+    }
 
-    const CELL: u16 = 4; // "nnn " fixture number, coloured
+    const CELL: u16 = 6; // " addr " coloured
     let per_row = (inner.width / CELL).max(1) as usize;
     let mut lines = Vec::new();
     let mut row = Vec::new();
-    for (i, fix) in st.output.chunks_exact(FIXTURE_CHANNELS).enumerate() {
-        let (w, r, b, g) = (fix[0] as u16, fix[1] as u16, fix[2] as u16, fix[3] as u16);
-        let mix = |c: u16| (c + w).min(255) as u8;
+    for (_, f) in &st.fixtures {
+        let (Some(addr), personality) = (f.dmx_address, f.personality.unwrap_or(layout::PERSONALITY_16BIT)) else {
+            continue;
+        };
+        let c = layout::read(&st.output, addr, personality);
+        let to8 = |v: u16| v >> 8;
+        let (w, r, g, b) = (to8(c.w), to8(c.r), to8(c.g), to8(c.b));
+        let mix = |v: u16| (v + w).min(255) as u8;
         let bg = Color::Rgb(mix(r), mix(g), mix(b));
         let bright = r * 3 + g * 6 + b + w * 10 > 1100;
         let fg = if bright { Color::Black } else { Color::Gray };
-        row.push(Span::styled(format!("{:>3} ", i + 1), Style::new().fg(fg).bg(bg)));
+        row.push(Span::styled(format!(" {addr:>3}  "), Style::new().fg(fg).bg(bg)));
         if row.len() == per_row {
             lines.push(Line::from(std::mem::take(&mut row)));
         }

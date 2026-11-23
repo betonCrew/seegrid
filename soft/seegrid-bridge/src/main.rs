@@ -3,6 +3,7 @@
 
 mod artnet;
 mod enttec;
+mod layout;
 mod link;
 mod pattern;
 mod rdm;
@@ -111,6 +112,16 @@ fn handle_input(events: &[egui::Event], view: &mut ui::View, st: &mut state::Sha
                     Key::E => {
                         if let Some((_, f)) = &selected {
                             view.edit = Some(f.dmx_address.map(|a| a.to_string()).unwrap_or_default());
+                        }
+                    }
+                    Key::P => {
+                        if let Some((uid, f)) = selected {
+                            let next = if f.personality == Some(layout::PERSONALITY_8BIT) {
+                                layout::PERSONALITY_16BIT
+                            } else {
+                                layout::PERSONALITY_8BIT
+                            };
+                            st.commands.push_back(Command::SetPersonality(uid, next));
                         }
                     }
                     Key::I => {

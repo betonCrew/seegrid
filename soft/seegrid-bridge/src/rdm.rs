@@ -27,6 +27,7 @@ pub const PID_DISC_UNIQUE_BRANCH: u16 = 0x0001;
 pub const PID_DISC_MUTE: u16 = 0x0002;
 pub const PID_DISC_UN_MUTE: u16 = 0x0003;
 pub const PID_DEVICE_INFO: u16 = 0x0060;
+pub const PID_DMX_PERSONALITY: u16 = 0x00E0;
 pub const PID_DMX_START_ADDRESS: u16 = 0x00F0;
 pub const PID_SENSOR_VALUE: u16 = 0x0201;
 pub const PID_IDENTIFY_DEVICE: u16 = 0x1000;
@@ -153,6 +154,7 @@ fn decode_response(p: &[u8]) -> Reply {
 pub struct Fixture {
     pub dmx_address: Option<u16>,
     pub footprint: Option<u16>,
+    pub personality: Option<u8>,
     pub firmware: Option<u32>,
     pub battery_mv: Option<u16>,
     pub dmx_fps: Option<u16>,
@@ -172,6 +174,7 @@ impl Fixture {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Command {
     SetAddress(Uid, u16),
+    SetPersonality(Uid, u8),
     Identify(Uid, bool),
     Discover,
 }
@@ -255,6 +258,7 @@ impl Controller {
         while let Some(cmd) = self.commands.pop_front() {
             match cmd {
                 Command::SetAddress(uid, a) => return Some(Op::Set(uid, PID_DMX_START_ADDRESS, a.to_be_bytes().to_vec())),
+                Command::SetPersonality(uid, p) => return Some(Op::Set(uid, PID_DMX_PERSONALITY, vec![p])),
                 Command::Identify(uid, on) => return Some(Op::Set(uid, PID_IDENTIFY_DEVICE, vec![on as u8])),
                 Command::Discover => self.start_discovery(),
             }
@@ -341,6 +345,7 @@ impl Controller {
                     PID_DEVICE_INFO if d.len() >= 19 => {
                         fix.firmware = Some(u32::from_be_bytes([d[6], d[7], d[8], d[9]]));
                         fix.footprint = Some(u16::from_be_bytes([d[10], d[11]]));
+                        fix.personality = Some(d[12]);
                         fix.dmx_address = Some(u16::from_be_bytes([d[14], d[15]]));
                     }
                     PID_SENSOR_VALUE if d.len() >= 3 => {
@@ -367,11 +372,19 @@ impl Controller {
                         match *pid {
                             PID_DMX_START_ADDRESS => fix.dmx_address = Some(u16::from_be_bytes([pd[0], pd[1]])),
                             PID_IDENTIFY_DEVICE => fix.identify = Some(pd[0] != 0),
+                            PID_DMX_PERSONALITY => {
+                                fix.personality = Some(pd[0]);
+                                fix.footprint = Some(crate::layout::footprint(pd[0]) as u16);
+                            }
                             _ => {}
                         }
                     }
                     Reply::Response(r) => {
-                        let what = if *pid == PID_DMX_START_ADDRESS { "address" } else { "identify" };
+                        let what = match *pid {
+                            PID_DMX_START_ADDRESS => "address",
+                            PID_DMX_PERSONALITY => "personality",
+                            _ => "identify",
+                        };
                         fix.error = Some(match r.nack_reason() {
                             Some(0x0006) => format!("{what}: out of range"),
                             other => format!("{what}: NACK {:#06x}", other.unwrap_or(0)),

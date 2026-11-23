@@ -60,7 +60,7 @@ pub fn spawn(state: SharedState, rate_hz: f32) {
                 let mut st = state.lock().unwrap();
                 st.output = match st.source {
                     Source::ArtNet => st.artnet_data,
-                    Source::TestPattern => test_pattern(start.elapsed().as_secs_f32()),
+                    Source::TestPattern => test_pattern(start.elapsed().as_secs_f32(), &st.fixtures),
                     Source::Blackout => [0; CHANNELS],
                 };
                 st.output
