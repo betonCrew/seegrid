@@ -1,23 +1,35 @@
 //! ratatui drawing only; independent of the window backend.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Paragraph, Wrap};
+use ratatui::widgets::{Block, Cell, Paragraph, Row, Table, TableState, Wrap};
 use ratatui::Frame;
 
-use crate::output::FIXTURE_CHANNELS;
+use crate::pattern::FIXTURE_CHANNELS;
 use crate::state::{Shared, Source};
 
-pub fn draw(frame: &mut Frame, st: &Shared) {
+/// UI-only state (selection, address input)
+#[derive(Default)]
+pub struct View {
+    pub selected: usize,
+    /// address being typed for the selected fixture
+    pub edit: Option<String>,
+}
+
+const LAST_SEEN_OK: Duration = Duration::from_secs(3);
+const LAST_SEEN_LOST: Duration = Duration::from_secs(10);
+const BATTERY_LOW_MV: u16 = 4400;
+
+pub fn draw(frame: &mut Frame, st: &Shared, view: &View) {
     let now = Instant::now();
-    let [header, status, preview, fixtures, help] = Layout::vertical([
+    let [header, status, preview, fixtures, help_area] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(7),
+        Constraint::Length(8),
         Constraint::Min(6),
-        Constraint::Length(4),
         Constraint::Length(1),
     ])
     .areas(frame.area());
@@ -32,18 +44,87 @@ pub fn draw(frame: &mut Frame, st: &Shared) {
 
     draw_preview(frame, st, preview);
 
-    frame.render_widget(
-        Paragraph::new("No fixture data yet: needs the RF control protocol (heartbeat, battery, address).")
-            .wrap(Wrap { trim: true })
-            .dark_gray()
-            .block(Block::bordered().title(" Fixtures ")),
-        fixtures,
-    );
+    draw_fixtures(frame, st, view, fixtures, now);
 
-    frame.render_widget(
-        Line::from(" a Art-Net   t test pattern   b blackout   q quit ").dark_gray(),
-        help,
+    let help = match &view.edit {
+        Some(text) => Line::from(vec![
+            Span::raw(" DMX start address: ").yellow(),
+            Span::raw(format!("{text}_")).bold(),
+            Span::raw("   Enter set   Esc cancel").dark_gray(),
+        ]),
+        None => Line::from(
+            " a Art-Net  t test  b blackout   \u{2191}\u{2193} select  e address  i identify  d discover   q quit ",
+        )
+        .dark_gray(),
+    };
+    frame.render_widget(help, help_area);
+}
+
+fn age_text(age: Duration) -> String {
+    let s = age.as_secs_f32();
+    if s < 60.0 { format!("{s:.1} s") } else { format!("{:.0} min", s / 60.0) }
+}
+
+fn draw_fixtures(frame: &mut Frame, st: &Shared, view: &View, area: Rect, now: Instant) {
+    let dash = || Cell::from("-").dark_gray();
+    let rows: Vec<Row> = st
+        .fixtures
+        .iter()
+        .map(|(uid, f)| {
+            let addr = f.dmx_address.map_or_else(dash, |a| Cell::from(a.to_string()));
+            let battery = f.battery_mv.map_or_else(dash, |mv| {
+                let c = Cell::from(format!("{:.2} V", mv as f32 / 1000.0));
+                if mv < BATTERY_LOW_MV { c.red() } else { c }
+            });
+            let fps = f.dmx_fps.map_or_else(dash, |v| Cell::from(v.to_string()));
+            let seen = f.last_seen_age(now).map_or_else(dash, |age| {
+                let c = Cell::from(age_text(age));
+                if age < LAST_SEEN_OK {
+                    c.green()
+                } else if age < LAST_SEEN_LOST {
+                    c.yellow()
+                } else {
+                    Cell::from(format!("lost ({})", age_text(age))).red()
+                }
+            });
+            let identify = match f.identify {
+                Some(true) => Cell::from("blinking").yellow(),
+                Some(false) => Cell::from("off").dark_gray(),
+                None => dash(),
+            };
+            let note = f.error.as_deref().map_or_else(|| Cell::from(""), |e| Cell::from(e.to_owned()).red());
+            Row::new(vec![Cell::from(uid.to_string()), addr, battery, fps, seen, identify, note])
+        })
+        .collect();
+
+    let discovery = if st.rdm_discovering { "discovering..." } else { "" };
+    let title = format!(
+        " Fixtures ({})  RDM {} req, {} timeouts  {discovery} ",
+        st.fixtures.len(),
+        st.rdm.requests,
+        st.rdm.timeouts
     );
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(14),
+            Constraint::Length(5),
+            Constraint::Length(8),
+            Constraint::Length(5),
+            Constraint::Length(15),
+            Constraint::Length(9),
+            Constraint::Min(10),
+        ],
+    )
+    .header(Row::new(["UID", "Addr", "Battery", "DMX/s", "Last seen", "Identify", ""]).dark_gray())
+    .row_highlight_style(Style::new().bg(Color::Rgb(40, 40, 70)).add_modifier(Modifier::BOLD))
+    .block(Block::bordered().title(title));
+
+    let mut ts = TableState::default();
+    if !st.fixtures.is_empty() {
+        ts.select(Some(view.selected.min(st.fixtures.len() - 1)));
+    }
+    frame.render_stateful_widget(table, area, &mut ts);
 }
 
 fn ok_err(ok: bool, ok_text: &str, err_text: &str) -> Span<'static> {

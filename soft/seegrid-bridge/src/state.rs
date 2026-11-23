@@ -1,8 +1,11 @@
 //! State shared between the Art-Net receiver, the serial output and the UI.
 
+use std::collections::VecDeque;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+use crate::rdm;
 
 pub const CHANNELS: usize = 512;
 pub type Universe = [u8; CHANNELS];
@@ -77,6 +80,12 @@ pub struct Shared {
     pub output: Universe,
     pub artnet: ArtNetStatus,
     pub serial: SerialStatus,
+    /// fixtures found via RDM, as last polled
+    pub fixtures: Vec<(rdm::Uid, rdm::Fixture)>,
+    pub rdm: rdm::Stats,
+    pub rdm_discovering: bool,
+    /// UI -> RDM controller
+    pub commands: VecDeque<rdm::Command>,
 }
 
 pub type SharedState = Arc<Mutex<Shared>>;
@@ -88,6 +97,10 @@ pub fn new_shared(port: &str, universe: u16) -> SharedState {
         output: [0; CHANNELS],
         artnet: ArtNetStatus { universe, ..Default::default() },
         serial: SerialStatus { port: port.to_owned(), ..Default::default() },
+        fixtures: Vec::new(),
+        rdm: rdm::Stats::default(),
+        rdm_discovering: false,
+        commands: VecDeque::new(),
     }))
 }
 
