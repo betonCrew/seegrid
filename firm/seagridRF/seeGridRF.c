@@ -299,6 +299,8 @@ bool sgRF_init(sgRF_radio_t* radio){
         nrf24_setRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, dmx_chunk_addr);
         nrf24_enableRxAddr(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, 1<<BROADCAST_RX_PIPE);
         nrf24_setPayloadWidth(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, BROADCAST_RX_PIPE, BROADCAST_PL_WITDH);
+        /* after nrf24_reset the radio is PTX: with CE high it would never listen */
+        nrf24_setPrimRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin);
 
         /* enable interrupt handling */
         NVIC_SetPriority(radio->irqN, 0);
