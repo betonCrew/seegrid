@@ -140,11 +140,8 @@ volatile debug_t debug = {0,0,0,0};
     //     .init = false
     // };
 
-    // battLvl_t batt = {
-    //     .port = BATT_V_PORT,
-    //     .pin = BATT_V_PIN,
-    //     .init = false
-    // };
+    battLvl_t batt = { .init = false };
+    #define BATT_PERIOD_MS      1000
 
     sgRF_radio_t radio = {
         .usic = USIC0,
@@ -247,7 +244,7 @@ volatile debug_t debug = {0,0,0,0};
         led_enable(&led);
 
         SysTick_Config(SystemCoreClock / TICKS_PER_SECOND);
-        // battLvl_init(&batt);
+        battLvl_init(&batt);
         // boostCon_init(&boost);
         sgRF_init(&radio);
 
@@ -273,6 +270,12 @@ volatile debug_t debug = {0,0,0,0};
                 frame_received(&frame);
             }
             handle_signal_loss();
+
+            static uint32_t batt_ms;
+            if (msTicks - batt_ms >= BATT_PERIOD_MS) {
+                batt_ms = msTicks;
+                battLvl_read(&batt);
+            }
         }
     }
 
