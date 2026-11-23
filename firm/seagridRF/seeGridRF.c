@@ -388,7 +388,7 @@ bool sgRF_init(sgRF_radio_t* radio){
                     debug.rx_count++;
                     #endif
                     
-                    nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)radio->data, 4, BROADCAST_PL_WITDH);
+                    nrf24_readRx(radio->spiHardware, radio->spiSelo, radio->cePort, radio->cePin, (char*)radio->data, 1, BROADCAST_PL_WITDH);
 
                     radio->_rx_flag = false;
                     radio->_frame_flag = true;
