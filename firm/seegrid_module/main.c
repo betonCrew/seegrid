@@ -94,10 +94,10 @@ volatile debug_t debug = {0,0,0,0};
 
     /* Color and Sequence Data */
     led_val_t test_seq[4][4] = {
-        {0xFF, 0x00, 0x00, 0x00},
-        {0x00, 0xFF, 0x00, 0x00},
-        {0x00, 0x00, 0xFF, 0x00},
-        {0x00, 0x00, 0x00, 0xFF}
+        {0xFFFF, 0x0000, 0x0000, 0x0000},
+        {0x0000, 0xFFFF, 0x0000, 0x0000},
+        {0x0000, 0x0000, 0xFFFF, 0x0000},
+        {0x0000, 0x0000, 0x0000, 0xFFFF}
     };
     
     /* configuration */
@@ -163,6 +163,26 @@ volatile debug_t debug = {0,0,0,0};
         sgRF_radioIrqHandler(&radio);
     }
 
+    /**
+     * DMX channel value -> 16 bit PWM compare value
+     * quadratic curve (gamma 2) so dimming looks even to the eye
+     */
+    static led_val_t dmx_to_pwm(const sgRF_fixCh_t val) {
+        const uint32_t ch_max = (1UL << (8 * FIXTURE_CH_BYTES)) - 1;
+        const uint32_t v16 = (uint32_t)val * 0xFFFF / ch_max;
+        return (led_val_t)((v16 * v16 + 0xFFFE) / 0xFFFF);
+    }
+
+    static void show_frame(const sgRF_fixFrame_t* frame) {
+        const led_color_t col = {
+            .red   = dmx_to_pwm(frame->red),
+            .green = dmx_to_pwm(frame->green),
+            .blue  = dmx_to_pwm(frame->blue),
+        };
+        led_setColor(&led, col);
+        led_setWhite(&led, dmx_to_pwm(frame->white));
+    }
+
 
 
 
@@ -194,7 +214,6 @@ volatile debug_t debug = {0,0,0,0};
         }
         led_setColorPreset(&led, COL_BLACK);
         led_setWhite(&led, 0x0000);
-        led_disable(&led);
 
 
         sgRF_enableBroadcastReceiver(&radio);
@@ -206,6 +225,7 @@ volatile debug_t debug = {0,0,0,0};
 
             if (sgRF_receivedFrame(&radio)) {
                 const sgRF_fixFrame_t frame = sgRF_readFrame(&radio);
+                show_frame(&frame);
             }
         }
     }
